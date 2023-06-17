@@ -87,12 +87,10 @@ function Game() {
       setPlayerId(id);
     });
     socket.on('updatePlayer1', (pos) => {
-      console.log('updating player1');
       setPosX1(pos.x);
       setPosY1(pos.y);
     });
     socket.on('updatePlayer2', (pos) => {
-      console.log('updating player2');
       setPosX2(pos.x);
       setPosY2(pos.y);
     });
