@@ -55,49 +55,50 @@ function Game() {
     }
 
     // check for diagonal movement - TODO: doesn't work yet
+    // calculate it once
     // if (dx !== 0 && dy !== 0) {
     //   // move diagonally with a speed of sqrt(2)/2
     //   dx *= Math.sqrt(2) / 2;
     //   dy *= Math.sqrt(2) / 2;
     // }
 
-    if (playerId === 1) {
-      setPosX1(posX1 + dx);
-      setPosY1(posY1 + dy);
-      socket.emit('updatePlayer1', { x: posX1, y: posY1 });
-    } else {
-      setPosX2(posX2 + dx);
-      setPosY2(posY2 + dy);
-      socket.emit('updatePlayer2', { x: posX2, y: posY2 });
-    }
+    // if (playerId === 1) {
+    setPosX1(posX1 + dx);
+    setPosY1(posY1 + dy);
+    // socket.emit('updatePlayer1', { x: posX1, y: posY1 });
+    // } else {
+    // setPosX2(posX2 + dx);
+    // setPosY2(posY2 + dy);
+    // socket.emit('updatePlayer2', { x: posX2, y: posY2 });
+    // }
   };
 
   // socket listener
-  useEffect(() => {
-    socket =
-      process.env.NODE_ENV === 'production'
-        ? io('https://nycmud.com', {
-            path: '/socket.io',
-          })
-        : io('http://localhost:5000');
-    socket.on('playerCountUpdate', (count: number) => {
-      setPlayerCount(count);
-    });
-    socket.on('assignPlayerId', (id: number) => {
-      setPlayerId(id);
-    });
-    socket.on('updatePlayer1', (pos) => {
-      setPosX1(pos.x);
-      setPosY1(pos.y);
-    });
-    socket.on('updatePlayer2', (pos) => {
-      setPosX2(pos.x);
-      setPosY2(pos.y);
-    });
-    socket.on('display', (res: string) => {
-      console.log(res);
-    });
-  }, []);
+  // useEffect(() => {
+  //   socket =
+  //     process.env.NODE_ENV === 'production'
+  //       ? io('https://nycmud.com', {
+  //           path: '/socket.io',
+  //         })
+  //       : io('http://localhost:5000');
+  //   socket.on('playerCountUpdate', (count: number) => {
+  //     setPlayerCount(count);
+  //   });
+  //   socket.on('assignPlayerId', (id: number) => {
+  //     setPlayerId(id);
+  //   });
+  //   socket.on('updatePlayer1', (pos) => {
+  //     setPosX1(pos.x);
+  //     setPosY1(pos.y);
+  //   });
+  //   socket.on('updatePlayer2', (pos) => {
+  //     setPosX2(pos.x);
+  //     setPosY2(pos.y);
+  //   });
+  //   socket.on('display', (res: string) => {
+  //     console.log(res);
+  //   });
+  // }, []);
 
   // move controller
   useEffect(() => {
