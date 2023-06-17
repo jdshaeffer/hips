@@ -74,7 +74,12 @@ function Game() {
 
   // socket listener
   useEffect(() => {
-    socket = io('http://localhost:5000');
+    socket =
+      process.env.NODE_ENV === 'production'
+        ? io('https://nycmud.com', {
+            path: '/socket.io',
+          })
+        : io('http://localhost:5000');
     socket.on('playerCountUpdate', (count: number) => {
       setPlayerCount(count);
     });
