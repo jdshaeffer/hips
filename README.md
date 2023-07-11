@@ -14,5 +14,3 @@ companion server (BE) repo: https://github.com/jdshaeffer/hips-server
 2. install: `yarn`
 3. start FE: `yarn start`
 4. go over to [the server repo](https://github.com/jdshaeffer/hips-server) and follow instructions there
-
-join our discord server: https://discord.gg/zv8q34GbyS
