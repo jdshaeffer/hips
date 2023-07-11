@@ -137,11 +137,15 @@ function Game() {
     let dy = 0;
     const speed = 2;
     const diagspd = 1.4;
-    if (direction === 'n') dy -= speed;
-    else if (direction === 's') dy += speed;
-    else if (direction === 'w') dx -= speed;
-    else if (direction === 'e') dx += speed;
-    else if (direction === 'ne') {
+    if (direction === 'n') {
+      dy -= speed;
+    } else if (direction === 's') {
+      dy += speed;
+    } else if (direction === 'w') {
+      dx -= speed;
+    } else if (direction === 'e') {
+      dx += speed;
+    } else if (direction === 'ne') {
       dy -= diagspd;
       dx += diagspd;
     } else if (direction === 'nw') {
