@@ -40,11 +40,7 @@ function Game() {
           setDirection('w');
         }
       }
-    }
-  };
-
-  const secondKeyDown = (e: KeyboardEvent) => {
-    if (moving) {
+    } else {
       if (
         validKeys.has(e.key) &&
         !(direction === 'n' && (e.key === 'w' || e.key === 'ArrowUp')) &&
@@ -204,12 +200,10 @@ function Game() {
     }
 
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keydown', secondKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keydown', secondKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
   });
