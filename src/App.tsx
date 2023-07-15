@@ -14,7 +14,6 @@ function Game() {
   const [direction, setDirection] = useState('');
   const [playerCount, setPlayerCount] = useState(0);
   const [playerId, setPlayerId] = useState(0);
-  const [collision1, setCollision1] = useState(false);
 
   const player1Ref = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
@@ -32,7 +31,7 @@ function Game() {
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!moving) {
-      if (validKeys.has(e.key) && !collision1) {
+      if (validKeys.has(e.key)) {
         setMoving(true);
         if (e.key === 'ArrowUp' || e.key === 'w') {
           setDirection('n');
@@ -161,7 +160,6 @@ function Game() {
     } else {
       borderDetected.delete('n');
     }
-    console.log(borderDetected);
     return borderDetected;
   };
 
@@ -181,73 +179,81 @@ function Game() {
       dx -= speed;
     } else if (direction === 'e' && !borderCollision.has('e')) {
       dx += speed;
-    } else if (
-      direction === 'ne' &&
-      !borderCollision.has('n') &&
-      !borderCollision.has('e')
-    ) {
-      dy -= diagspd;
-      dx += diagspd;
-    } else if (
-      direction === 'nw' &&
-      !borderCollision.has('n') &&
-      !borderCollision.has('w')
-    ) {
-      dy -= diagspd;
-      dx -= diagspd;
-    } else if (
-      direction === 'se' &&
-      !borderCollision.has('s') &&
-      !borderCollision.has('e')
-    ) {
-      dy += diagspd;
-      dx += diagspd;
-    } else if (
-      direction === 'sw' &&
-      !borderCollision.has('s') &&
-      !borderCollision.has('w')
-    ) {
-      dy += diagspd;
-      dx -= diagspd;
+    } else if (direction === 'ne') {
+      if (borderCollision.has('n') && !borderCollision.has('e')) {
+        dx += speed;
+      } else if (borderCollision.has('e') && !borderCollision.has('n')) {
+        dy -= speed;
+      } else if (!borderCollision.has('n') && !borderCollision.has('e')) {
+        dy -= diagspd;
+        dx += diagspd;
+      }
+    } else if (direction === 'nw') {
+      if (borderCollision.has('n') && !borderCollision.has('w')) {
+        dx -= speed;
+      } else if (borderCollision.has('w') && !borderCollision.has('n')) {
+        dy -= speed;
+      } else if (!borderCollision.has('n') && !borderCollision.has('w')) {
+        dy -= diagspd;
+        dx -= diagspd;
+      }
+    } else if (direction === 'se') {
+      if (borderCollision.has('s') && !borderCollision.has('e')) {
+        dx += speed;
+      } else if (borderCollision.has('e') && !borderCollision.has('s')) {
+        dy += speed;
+      } else if (!borderCollision.has('s') && !borderCollision.has('e')) {
+        dy += diagspd;
+        dx += diagspd;
+      }
+    } else if (direction === 'sw') {
+      if (borderCollision.has('s') && !borderCollision.has('w')) {
+        dx -= speed;
+      } else if (borderCollision.has('w') && !borderCollision.has('s')) {
+        dy += speed;
+      } else if (!borderCollision.has('s') && !borderCollision.has('w')) {
+        dy += diagspd;
+        dx -= diagspd;
+      }
     }
 
-    // if (playerId === 1) {
-    setPosX1(posX1 + dx);
-    setPosY1(posY1 + dy);
-    //   socket.emit('updatePlayer1', { x: posX1, y: posY1 });
-    // } else {
-    //   setPosX2(posX2 + dx);
-    //   setPosY2(posY2 + dy);
-    //   socket.emit('updatePlayer2', { x: posX2, y: posY2 });
-    // }
+    if (playerId === 1) {
+      setPosX1(posX1 + dx);
+      setPosY1(posY1 + dy);
+      socket.emit('updatePlayer1', { x: posX1, y: posY1 });
+    } else {
+      setPosX2(posX2 + dx);
+      setPosY2(posY2 + dy);
+      socket.emit('updatePlayer2', { x: posX2, y: posY2 });
+    }
   };
 
   // socket listener
-  // useEffect(() => {
-  //   socket =
-  //     process.env.NODE_ENV === 'production'
-  //       ? io('https://nycmud.com', {
-  //           path: '/socket.io',
-  //         })
-  //       : io('http://localhost:5000');
-  //   socket.on('playerCountUpdate', (count: number) => {
-  //     setPlayerCount(count);
-  //   });
-  //   socket.on('assignPlayerId', (id: number) => {
-  //     setPlayerId(id);
-  //   });
-  //   socket.on('updatePlayer1', (pos) => {
-  //     setPosX1(pos.x);
-  //     setPosY1(pos.y);
-  //   });
-  //   socket.on('updatePlayer2', (pos) => {
-  //     setPosX2(pos.x);
-  //     setPosY2(pos.y);
-  //   });
-  //   socket.on('display', (res: string) => {
-  //     console.log(res);
-  //   });
-  // }, []);
+  useEffect(() => {
+    socket =
+      process.env.NODE_ENV === 'production'
+        ? io('https://nycmud.com', {
+            path: '/socket.io',
+          })
+        : io('http://localhost:5000');
+    socket.on('playerCountUpdate', (count: number) => {
+      setPlayerCount(count);
+    });
+    socket.on('assignPlayerId', (id: number) => {
+      setPlayerId(id);
+    });
+    socket.on('updatePlayer1', (pos) => {
+      setPosX1(pos.x);
+      setPosY1(pos.y);
+    });
+    socket.on('updatePlayer2', (pos) => {
+      setPosX2(pos.x);
+      setPosY2(pos.y);
+    });
+    socket.on('display', (res: string) => {
+      console.log(res);
+    });
+  }, []);
 
   // move controller
   useEffect(() => {
