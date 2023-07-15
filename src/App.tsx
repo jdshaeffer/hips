@@ -34,22 +34,22 @@ function Game() {
       setMoving(true);
       if (
         (e.key === 'ArrowUp' || e.key === 'w') &&
-        direction.indexOf('n') == -1
+        direction.indexOf('n') === -1
       ) {
         setDirection(direction + 'n');
       } else if (
         (e.key === 'ArrowDown' || e.key === 's') &&
-        direction.indexOf('s') == -1
+        direction.indexOf('s') === -1
       ) {
         setDirection(direction + 's');
       } else if (
         (e.key === 'ArrowRight' || e.key === 'd') &&
-        direction.indexOf('e') == -1
+        direction.indexOf('e') === -1
       ) {
         setDirection(direction + 'e');
       } else if (
         (e.key === 'ArrowLeft' || e.key === 'a') &&
-        direction.indexOf('w') == -1
+        direction.indexOf('w') === -1
       ) {
         setDirection(direction + 'w');
       }
@@ -71,7 +71,7 @@ function Game() {
         const i = direction.indexOf('w');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       }
-      if (direction.length == 0) {
+      if (direction.length === 0) {
         setMoving(false);
       }
     }
@@ -168,7 +168,7 @@ function Game() {
       } else {
         setMoving(false);
       }
-    } else if (l == 0 || l > 2) {
+    } else if (l === 0 || l > 2) {
       setMoving(false);
     }
 
