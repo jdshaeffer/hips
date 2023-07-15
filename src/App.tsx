@@ -59,16 +59,16 @@ function Game() {
   const handleKeyUp = (e: KeyboardEvent) => {
     if (validKeys.has(e.key)) {
       if (e.key === 'ArrowUp' || e.key === 'w') {
-        let i = direction.indexOf('n');
+        const i = direction.indexOf('n');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       } else if (e.key === 'ArrowDown' || e.key === 's') {
-        let i = direction.indexOf('s');
+        const i = direction.indexOf('s');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       } else if (e.key === 'ArrowRight' || e.key === 'd') {
-        let i = direction.indexOf('e');
+        const i = direction.indexOf('e');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-        let i = direction.indexOf('w');
+        const i = direction.indexOf('w');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       }
       if (direction.length == 0) {
@@ -129,7 +129,7 @@ function Game() {
         dx += speed;
       }
     } else if (l === 2) {
-      if (direction === 'ne') {
+      if (direction === 'ne' || direction === 'en') {
         if (borderCollision.has('n') && !borderCollision.has('e')) {
           dx += speed;
         } else if (borderCollision.has('e') && !borderCollision.has('n')) {
@@ -138,7 +138,7 @@ function Game() {
           dy -= diagspd;
           dx += diagspd;
         }
-      } else if (direction === 'nw') {
+      } else if (direction === 'nw' || direction === 'wn') {
         if (borderCollision.has('n') && !borderCollision.has('w')) {
           dx -= speed;
         } else if (borderCollision.has('w') && !borderCollision.has('n')) {
@@ -147,7 +147,7 @@ function Game() {
           dy -= diagspd;
           dx -= diagspd;
         }
-      } else if (direction === 'se') {
+      } else if (direction === 'se' || direction === 'es') {
         if (borderCollision.has('s') && !borderCollision.has('e')) {
           dx += speed;
         } else if (borderCollision.has('e') && !borderCollision.has('s')) {
@@ -156,7 +156,7 @@ function Game() {
           dy += diagspd;
           dx += diagspd;
         }
-      } else if (direction === 'sw') {
+      } else if (direction === 'sw' || direction === 'ws') {
         if (borderCollision.has('s') && !borderCollision.has('w')) {
           dx -= speed;
         } else if (borderCollision.has('w') && !borderCollision.has('s')) {
