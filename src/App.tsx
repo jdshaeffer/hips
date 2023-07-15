@@ -25,38 +25,51 @@ function Game() {
     'd',
   ]);
 
-const handleKeyDown = (e: KeyboardEvent) => {
-    if (validKeys.includes(e.key)) {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (validKeys.has(e.key)) {
       setMoving(true);
-      // console.log('Key pressed: ' + e.key);
-      if((e.key === 'ArrowUp' || e.key === 'w') && direction.indexOf('n') == -1) setDirection(direction + 'n');
-      else if((e.key === 'ArrowDown' || e.key === 's') && direction.indexOf('s') == -1) setDirection(direction + 's');
-      else if((e.key === 'ArrowRight' || e.key === 'd') && direction.indexOf('e') == -1) setDirection(direction + 'e');
-      else if((e.key === 'ArrowLeft' || e.key === 'a') && direction.indexOf('w') == -1) setDirection(direction + 'w');
-      console.log('Key down: ' + e.key);
+      if (
+        (e.key === 'ArrowUp' || e.key === 'w') &&
+        direction.indexOf('n') == -1
+      ) {
+        setDirection(direction + 'n');
+      } else if (
+        (e.key === 'ArrowDown' || e.key === 's') &&
+        direction.indexOf('s') == -1
+      ) {
+        setDirection(direction + 's');
+      } else if (
+        (e.key === 'ArrowRight' || e.key === 'd') &&
+        direction.indexOf('e') == -1
+      ) {
+        setDirection(direction + 'e');
+      } else if (
+        (e.key === 'ArrowLeft' || e.key === 'a') &&
+        direction.indexOf('w') == -1
+      ) {
+        setDirection(direction + 'w');
+      }
     }
   };
 
   const handleKeyUp = (e: KeyboardEvent) => {
-    if(validKeys.includes(e.key)) {
-      if(e.key === 'ArrowUp' || e.key === 'w') {
+    if (validKeys.has(e.key)) {
+      if (e.key === 'ArrowUp' || e.key === 'w') {
         let i = direction.indexOf('n');
-        setDirection(direction.substring(0,i)+direction.substring(i+1));
-      }
-      else if(e.key === 'ArrowDown' || e.key === 's') {
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
+      } else if (e.key === 'ArrowDown' || e.key === 's') {
         let i = direction.indexOf('s');
-        setDirection(direction.substring(0,i)+direction.substring(i+1));
-      }
-      else if(e.key === 'ArrowRight' || e.key === 'd') {
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
+      } else if (e.key === 'ArrowRight' || e.key === 'd') {
         let i = direction.indexOf('e');
-        setDirection(direction.substring(0,i)+direction.substring(i+1));
-      }
-      else if(e.key === 'ArrowLeft' || e.key === 'a') {
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'a') {
         let i = direction.indexOf('w');
-        setDirection(direction.substring(0,i)+direction.substring(i+1));
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
       }
-      console.log('Key up: ' + e.key);
-      if(direction.length == 0) setMoving(false);
+      if (direction.length == 0) {
+        setMoving(false);
+      }
     }
   };
 
@@ -65,19 +78,34 @@ const handleKeyDown = (e: KeyboardEvent) => {
     let dy = 0;
     const speed = 2;
     const diagspd = 1.4;
-    let l = direction.length;
-    if(l == 1) {
-      if(direction === 'n') dy -= speed;
-      else if(direction === 's') dy += speed;
-      else if(direction === 'e') dx += speed;
-      else if(direction === 'w') dx -= speed;
-    } else if(l == 2) {
-      if(direction === 'ne' || direction === 'en') { dx += diagspd; dy -= diagspd; }
-      else if (direction === 'se' || direction === 'es') { dx += diagspd; dy += diagspd; }
-      else if (direction === 'sw' || direction === 'ws') { dx -= diagspd; dy += diagspd; }
-      else if (direction === 'nw' || direction === 'wn') { dx -= diagspd; dy -= diagspd; }
-      else setMoving(false);
-    } else if(l == 0 || l > 2) {
+    const l = direction.length;
+    if (l == 1) {
+      if (direction === 'n') {
+        dy -= speed;
+      } else if (direction === 's') {
+        dy += speed;
+      } else if (direction === 'e') {
+        dx += speed;
+      } else if (direction === 'w') {
+        dx -= speed;
+      }
+    } else if (l == 2) {
+      if (direction === 'ne' || direction === 'en') {
+        dx += diagspd;
+        dy -= diagspd;
+      } else if (direction === 'se' || direction === 'es') {
+        dx += diagspd;
+        dy += diagspd;
+      } else if (direction === 'sw' || direction === 'ws') {
+        dx -= diagspd;
+        dy += diagspd;
+      } else if (direction === 'nw' || direction === 'wn') {
+        dx -= diagspd;
+        dy -= diagspd;
+      } else {
+        setMoving(false);
+      }
+    } else if (l == 0 || l > 2) {
       setMoving(false);
     }
     if (playerId === 1) {
