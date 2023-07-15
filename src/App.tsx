@@ -30,103 +30,49 @@ function Game() {
   ]);
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (!moving) {
-      if (validKeys.has(e.key)) {
-        setMoving(true);
-        if (e.key === 'ArrowUp' || e.key === 'w') {
-          setDirection('n');
-        } else if (e.key === 'ArrowDown' || e.key === 's') {
-          setDirection('s');
-        } else if (e.key === 'ArrowRight' || e.key === 'd') {
-          setDirection('e');
-        } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-          setDirection('w');
-        }
-      }
-    } else {
+    if (validKeys.has(e.key)) {
+      setMoving(true);
       if (
-        validKeys.has(e.key) &&
-        !(direction === 'n' && (e.key === 'w' || e.key === 'ArrowUp')) &&
-        !(direction === 's' && (e.key === 's' || e.key === 'ArrowDown')) &&
-        !(direction === 'e' && (e.key === 'd' || e.key === 'ArrowRight')) &&
-        !(direction === 'w' && (e.key === 'a' || e.key === 'ArrowLeft')) &&
-        !(
-          direction === 'ne' ||
-          direction === 'nw' ||
-          direction === 'se' ||
-          direction === 'sw'
-        )
+        (e.key === 'ArrowUp' || e.key === 'w') &&
+        direction.indexOf('n') == -1
       ) {
-        if (direction === 'n') {
-          if (e.key === 'ArrowRight' || e.key === 'd') {
-            setDirection('ne');
-          } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-            setDirection('nw');
-          } else if (e.key === 'ArrowDown' || e.key === 's') {
-            setMoving(false);
-            setDirection('');
-          }
-        } else if (direction === 'e') {
-          if (e.key === 'ArrowUp' || e.key === 'w') {
-            setDirection('ne');
-          } else if (e.key === 'ArrowDown' || e.key === 's') {
-            setDirection('se');
-          } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-            setMoving(false);
-            setDirection('');
-          }
-        } else if (direction === 's') {
-          if (e.key === 'ArrowLeft' || e.key === 'a') {
-            setDirection('sw');
-          } else if (e.key === 'ArrowRight' || e.key === 'd') {
-            setDirection('se');
-          } else if (e.key === 'ArrowUp' || e.key === 'w') {
-            setMoving(false);
-            setDirection('');
-          }
-        } else if (direction === 'w') {
-          if (e.key === 'ArrowDown' || e.key === 's') {
-            setDirection('sw');
-          } else if (e.key === 'ArrowUp' || e.key === 'w') {
-            setDirection('nw');
-          } else if (e.key === 'ArrowRight' || e.key === 'd') {
-            setMoving(false);
-            setDirection('');
-          }
-        }
+        setDirection(direction + 'n');
+      } else if (
+        (e.key === 'ArrowDown' || e.key === 's') &&
+        direction.indexOf('s') == -1
+      ) {
+        setDirection(direction + 's');
+      } else if (
+        (e.key === 'ArrowRight' || e.key === 'd') &&
+        direction.indexOf('e') == -1
+      ) {
+        setDirection(direction + 'e');
+      } else if (
+        (e.key === 'ArrowLeft' || e.key === 'a') &&
+        direction.indexOf('w') == -1
+      ) {
+        setDirection(direction + 'w');
       }
     }
   };
 
   const handleKeyUp = (e: KeyboardEvent) => {
     if (validKeys.has(e.key)) {
-      if (direction === 'ne') {
-        if (e.key === 'ArrowUp' || e.key === 'w') {
-          setDirection('e');
-        } else if (e.key === 'ArrowRight' || e.key === 'd') {
-          setDirection('n');
-        }
-      } else if (direction === 'nw') {
-        if (e.key === 'ArrowUp' || e.key === 'w') {
-          setDirection('w');
-        } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-          setDirection('n');
-        }
-      } else if (direction === 'se') {
-        if (e.key === 'ArrowDown' || e.key === 's') {
-          setDirection('e');
-        } else if (e.key === 'ArrowRight' || e.key === 'd') {
-          setDirection('s');
-        }
-      } else if (direction === 'sw') {
-        if (e.key === 'ArrowDown' || e.key === 's') {
-          setDirection('w');
-        } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-          setDirection('s');
-        }
-      } else {
+      if (e.key === 'ArrowUp' || e.key === 'w') {
+        let i = direction.indexOf('n');
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
+      } else if (e.key === 'ArrowDown' || e.key === 's') {
+        let i = direction.indexOf('s');
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
+      } else if (e.key === 'ArrowRight' || e.key === 'd') {
+        let i = direction.indexOf('e');
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'a') {
+        let i = direction.indexOf('w');
+        setDirection(direction.substring(0, i) + direction.substring(i + 1));
+      }
+      if (direction.length == 0) {
         setMoving(false);
-        setDirection('');
       }
     }
   };
@@ -170,51 +116,60 @@ function Game() {
     const diagspd = 1.4;
 
     const borderCollision = checkBorderCollision();
+    const l = direction.length;
 
-    if (direction === 'n' && !borderCollision.has('n')) {
-      dy -= speed;
-    } else if (direction === 's' && !borderCollision.has('s')) {
-      dy += speed;
-    } else if (direction === 'w' && !borderCollision.has('w')) {
-      dx -= speed;
-    } else if (direction === 'e' && !borderCollision.has('e')) {
-      dx += speed;
-    } else if (direction === 'ne') {
-      if (borderCollision.has('n') && !borderCollision.has('e')) {
-        dx += speed;
-      } else if (borderCollision.has('e') && !borderCollision.has('n')) {
+    if (l === 1) {
+      if (direction === 'n' && !borderCollision.has('n')) {
         dy -= speed;
-      } else if (!borderCollision.has('n') && !borderCollision.has('e')) {
-        dy -= diagspd;
-        dx += diagspd;
-      }
-    } else if (direction === 'nw') {
-      if (borderCollision.has('n') && !borderCollision.has('w')) {
+      } else if (direction === 's' && !borderCollision.has('s')) {
+        dy += speed;
+      } else if (direction === 'w' && !borderCollision.has('w')) {
         dx -= speed;
-      } else if (borderCollision.has('w') && !borderCollision.has('n')) {
-        dy -= speed;
-      } else if (!borderCollision.has('n') && !borderCollision.has('w')) {
-        dy -= diagspd;
-        dx -= diagspd;
-      }
-    } else if (direction === 'se') {
-      if (borderCollision.has('s') && !borderCollision.has('e')) {
+      } else if (direction === 'e' && !borderCollision.has('e')) {
         dx += speed;
-      } else if (borderCollision.has('e') && !borderCollision.has('s')) {
-        dy += speed;
-      } else if (!borderCollision.has('s') && !borderCollision.has('e')) {
-        dy += diagspd;
-        dx += diagspd;
       }
-    } else if (direction === 'sw') {
-      if (borderCollision.has('s') && !borderCollision.has('w')) {
-        dx -= speed;
-      } else if (borderCollision.has('w') && !borderCollision.has('s')) {
-        dy += speed;
-      } else if (!borderCollision.has('s') && !borderCollision.has('w')) {
-        dy += diagspd;
-        dx -= diagspd;
+    } else if (l === 2) {
+      if (direction === 'ne') {
+        if (borderCollision.has('n') && !borderCollision.has('e')) {
+          dx += speed;
+        } else if (borderCollision.has('e') && !borderCollision.has('n')) {
+          dy -= speed;
+        } else if (!borderCollision.has('n') && !borderCollision.has('e')) {
+          dy -= diagspd;
+          dx += diagspd;
+        }
+      } else if (direction === 'nw') {
+        if (borderCollision.has('n') && !borderCollision.has('w')) {
+          dx -= speed;
+        } else if (borderCollision.has('w') && !borderCollision.has('n')) {
+          dy -= speed;
+        } else if (!borderCollision.has('n') && !borderCollision.has('w')) {
+          dy -= diagspd;
+          dx -= diagspd;
+        }
+      } else if (direction === 'se') {
+        if (borderCollision.has('s') && !borderCollision.has('e')) {
+          dx += speed;
+        } else if (borderCollision.has('e') && !borderCollision.has('s')) {
+          dy += speed;
+        } else if (!borderCollision.has('s') && !borderCollision.has('e')) {
+          dy += diagspd;
+          dx += diagspd;
+        }
+      } else if (direction === 'sw') {
+        if (borderCollision.has('s') && !borderCollision.has('w')) {
+          dx -= speed;
+        } else if (borderCollision.has('w') && !borderCollision.has('s')) {
+          dy += speed;
+        } else if (!borderCollision.has('s') && !borderCollision.has('w')) {
+          dy += diagspd;
+          dx -= diagspd;
+        }
+      } else {
+        setMoving(false);
       }
+    } else if (l == 0 || l > 2) {
+      setMoving(false);
     }
 
     if (playerId === 1) {

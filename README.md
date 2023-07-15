@@ -1,8 +1,8 @@
 # hips-web
 
-an open-source, web-based party game inspired by the classic, ["hidden in plain sight"](https://www.nintendo.com/store/products/hidden-in-plain-sight-switch/)
+FE repo for hips: an open-source, web-based party game inspired by the classic, ["hidden in plain sight"](https://www.nintendo.com/store/products/hidden-in-plain-sight-switch/)
 
-companion server (BE) repo: https://github.com/jdshaeffer/hips-server
+companion BE repo: https://github.com/jdshaeffer/hips-server
 
 > to play, head on to the (temp) domain: [nycmud.com](https://nycmud.com/)
 
