@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
 import './App.css';
@@ -14,6 +14,11 @@ function Game() {
   const [direction, setDirection] = useState('');
   const [playerCount, setPlayerCount] = useState(0);
   const [playerId, setPlayerId] = useState(0);
+
+  const player1Ref = useRef<HTMLDivElement>(null);
+  const player2Ref = useRef<HTMLDivElement>(null);
+  const borderRef = useRef<HTMLDivElement>(null);
+
   const validKeys = new Set([
     'ArrowUp',
     'ArrowDown',
@@ -30,22 +35,22 @@ function Game() {
       setMoving(true);
       if (
         (e.key === 'ArrowUp' || e.key === 'w') &&
-        direction.indexOf('n') == -1
+        direction.indexOf('n') === -1
       ) {
         setDirection(direction + 'n');
       } else if (
         (e.key === 'ArrowDown' || e.key === 's') &&
-        direction.indexOf('s') == -1
+        direction.indexOf('s') === -1
       ) {
         setDirection(direction + 's');
       } else if (
         (e.key === 'ArrowRight' || e.key === 'd') &&
-        direction.indexOf('e') == -1
+        direction.indexOf('e') === -1
       ) {
         setDirection(direction + 'e');
       } else if (
         (e.key === 'ArrowLeft' || e.key === 'a') &&
-        direction.indexOf('w') == -1
+        direction.indexOf('w') === -1
       ) {
         setDirection(direction + 'w');
       }
@@ -55,22 +60,54 @@ function Game() {
   const handleKeyUp = (e: KeyboardEvent) => {
     if (validKeys.has(e.key)) {
       if (e.key === 'ArrowUp' || e.key === 'w') {
-        let i = direction.indexOf('n');
+        const i = direction.indexOf('n');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       } else if (e.key === 'ArrowDown' || e.key === 's') {
-        let i = direction.indexOf('s');
+        const i = direction.indexOf('s');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       } else if (e.key === 'ArrowRight' || e.key === 'd') {
-        let i = direction.indexOf('e');
+        const i = direction.indexOf('e');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-        let i = direction.indexOf('w');
+        const i = direction.indexOf('w');
         setDirection(direction.substring(0, i) + direction.substring(i + 1));
       }
-      if (direction.length == 0) {
+      if (direction.length === 0) {
         setMoving(false);
       }
     }
+  };
+
+  const checkBorderCollision = () => {
+    const borderBuffer = 4;
+    const playerDiv = playerId === 1 ? player1Ref.current : player2Ref.current;
+    const borderDiv = borderRef.current;
+
+    const playerHitBox = playerDiv!.getBoundingClientRect();
+    const borderHitBox = borderDiv!.getBoundingClientRect();
+
+    let borderDetected = new Set<string>();
+    if (playerHitBox.left <= borderHitBox.left + borderBuffer) {
+      borderDetected.add('w');
+    } else {
+      borderDetected.delete('w');
+    }
+    if (playerHitBox.right >= borderHitBox.right - borderBuffer) {
+      borderDetected.add('e');
+    } else {
+      borderDetected.delete('e');
+    }
+    if (playerHitBox.bottom >= borderHitBox.bottom - borderBuffer) {
+      borderDetected.add('s');
+    } else {
+      borderDetected.delete('s');
+    }
+    if (playerHitBox.top <= borderHitBox.top + borderBuffer) {
+      borderDetected.add('n');
+    } else {
+      borderDetected.delete('n');
+    }
+    return borderDetected;
   };
 
   const move = () => {
@@ -78,36 +115,64 @@ function Game() {
     let dy = 0;
     const speed = 2;
     const diagspd = 1.4;
+
+    const borderCollision = checkBorderCollision();
     const l = direction.length;
-    if (l == 1) {
-      if (direction === 'n') {
+
+    if (l === 1) {
+      if (direction === 'n' && !borderCollision.has('n')) {
         dy -= speed;
-      } else if (direction === 's') {
+      } else if (direction === 's' && !borderCollision.has('s')) {
         dy += speed;
-      } else if (direction === 'e') {
-        dx += speed;
-      } else if (direction === 'w') {
+      } else if (direction === 'w' && !borderCollision.has('w')) {
         dx -= speed;
+      } else if (direction === 'e' && !borderCollision.has('e')) {
+        dx += speed;
       }
-    } else if (l == 2) {
+    } else if (l === 2) {
       if (direction === 'ne' || direction === 'en') {
-        dx += diagspd;
-        dy -= diagspd;
-      } else if (direction === 'se' || direction === 'es') {
-        dx += diagspd;
-        dy += diagspd;
-      } else if (direction === 'sw' || direction === 'ws') {
-        dx -= diagspd;
-        dy += diagspd;
+        if (borderCollision.has('n') && !borderCollision.has('e')) {
+          dx += speed;
+        } else if (borderCollision.has('e') && !borderCollision.has('n')) {
+          dy -= speed;
+        } else if (!borderCollision.has('n') && !borderCollision.has('e')) {
+          dy -= diagspd;
+          dx += diagspd;
+        }
       } else if (direction === 'nw' || direction === 'wn') {
-        dx -= diagspd;
-        dy -= diagspd;
+        if (borderCollision.has('n') && !borderCollision.has('w')) {
+          dx -= speed;
+        } else if (borderCollision.has('w') && !borderCollision.has('n')) {
+          dy -= speed;
+        } else if (!borderCollision.has('n') && !borderCollision.has('w')) {
+          dy -= diagspd;
+          dx -= diagspd;
+        }
+      } else if (direction === 'se' || direction === 'es') {
+        if (borderCollision.has('s') && !borderCollision.has('e')) {
+          dx += speed;
+        } else if (borderCollision.has('e') && !borderCollision.has('s')) {
+          dy += speed;
+        } else if (!borderCollision.has('s') && !borderCollision.has('e')) {
+          dy += diagspd;
+          dx += diagspd;
+        }
+      } else if (direction === 'sw' || direction === 'ws') {
+        if (borderCollision.has('s') && !borderCollision.has('w')) {
+          dx -= speed;
+        } else if (borderCollision.has('w') && !borderCollision.has('s')) {
+          dy += speed;
+        } else if (!borderCollision.has('s') && !borderCollision.has('w')) {
+          dy += diagspd;
+          dx -= diagspd;
+        }
       } else {
         setMoving(false);
       }
-    } else if (l == 0 || l > 2) {
+    } else if (l === 0 || l > 2) {
       setMoving(false);
     }
+
     if (playerId === 1) {
       setPosX1(posX1 + dx);
       setPosY1(posY1 + dy);
@@ -169,29 +234,30 @@ function Game() {
     );
   } else {
     return (
-      <div className='center-box'>
-        <h1
+      <div ref={borderRef} className='center-box'>
+        <div
           id='player1'
+          ref={player1Ref}
           className='player'
           style={{
             top: posY1,
             left: posX1,
+            padding: '10px',
+            border: '2px solid white',
           }}
-        >
-          @
-        </h1>
+        />
         {playerCount > 1 && (
-          <h1
+          <div
             id='player2'
+            ref={player2Ref}
             className='player'
             style={{
               top: posY2,
               left: posX2,
-              color: 'red',
+              padding: '10px',
+              border: '2px solid red',
             }}
-          >
-            @
-          </h1>
+          />
         )}
       </div>
     );
