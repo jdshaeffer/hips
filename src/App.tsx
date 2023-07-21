@@ -16,6 +16,7 @@ function Game() {
   const [playerId, setPlayerId] = useState(0);
 
   const player1Ref = useRef<HTMLDivElement>(null);
+  const player2Ref = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
 
   const validKeys = new Set([
@@ -79,29 +80,29 @@ function Game() {
 
   const checkBorderCollision = () => {
     const borderBuffer = 4;
-    const player1Div = player1Ref.current;
+    const playerDiv = playerId === 1 ? player1Ref.current : player2Ref.current;
     const borderDiv = borderRef.current;
 
-    const player1HitBox = player1Div!.getBoundingClientRect();
+    const playerHitBox = playerDiv!.getBoundingClientRect();
     const borderHitBox = borderDiv!.getBoundingClientRect();
 
     let borderDetected = new Set<string>();
-    if (player1HitBox.left <= borderHitBox.left + borderBuffer) {
+    if (playerHitBox.left <= borderHitBox.left + borderBuffer) {
       borderDetected.add('w');
     } else {
       borderDetected.delete('w');
     }
-    if (player1HitBox.right >= borderHitBox.right - borderBuffer) {
+    if (playerHitBox.right >= borderHitBox.right - borderBuffer) {
       borderDetected.add('e');
     } else {
       borderDetected.delete('e');
     }
-    if (player1HitBox.bottom >= borderHitBox.bottom - borderBuffer) {
+    if (playerHitBox.bottom >= borderHitBox.bottom - borderBuffer) {
       borderDetected.add('s');
     } else {
       borderDetected.delete('s');
     }
-    if (player1HitBox.top <= borderHitBox.top + borderBuffer) {
+    if (playerHitBox.top <= borderHitBox.top + borderBuffer) {
       borderDetected.add('n');
     } else {
       borderDetected.delete('n');
@@ -248,6 +249,7 @@ function Game() {
         {playerCount > 1 && (
           <div
             id='player2'
+            ref={player2Ref}
             className='player'
             style={{
               top: posY2,
