@@ -15,14 +15,10 @@ const socketConfig =
   process.env.NODE_ENV === 'prod'
     ? {
         path: '/socket.io',
-        cors: {
-          origin: ['https://jdshaeffer.github.io'],
-          methods: ['GET', 'POST'],
-        },
       }
     : {
         cors: {
-          origin: ['http://localhost:3000'],
+          origin: ['http://localhost:3000', 'https://jdshaeffer.github.io'],
           methods: ['GET', 'POST'],
         },
       };
