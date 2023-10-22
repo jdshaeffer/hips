@@ -2,7 +2,7 @@
 
 FE and BE for hips: an open-source, web-based party game inspired by the classic, ["hidden in plain sight"](https://www.nintendo.com/store/products/hidden-in-plain-sight-switch/)
 
-> to play, head on to the (temp) domain: [nycmud.com](https://nycmud.com/)
+> to play, head on to: [jdshaeffer.github.io/hips](https://jdshaeffer.github.io/hips/)
 
 > for contributors, read on...
 
