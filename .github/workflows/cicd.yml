@@ -29,6 +29,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: cache deps
+        uses: actions/cache@v2
+        with:
+          path: |
+            **/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+
       - name: install
         run: npm install
 
