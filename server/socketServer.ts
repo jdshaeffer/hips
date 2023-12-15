@@ -25,7 +25,9 @@ const socketConfig =
 
 const io = new Server(socketConfig);
 let playerCount = 0;
-// the Map object holds key-value pairs and remembers the original insertion order of the keys
+
+// NOTE: the Map object holds key-value pairs
+// and remembers the original insertion order of the keys
 const socketToPlayerId = new Map<number, string>();
 
 io.on('connection', (socket: SocketData) => {
@@ -46,6 +48,7 @@ io.on('connection', (socket: SocketData) => {
   socket.on('disconnect', () => {
     playerCount -= 1;
     socketToPlayerId.set(playerCount, socket.id);
+
     // need to emit to the remaining player that they're now player1
     socket.broadcast.emit('assignPlayerId', playerCount);
     io.emit('playerCountUpdate', playerCount);

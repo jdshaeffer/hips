@@ -5,73 +5,53 @@ import './App.css';
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
 
-function Game() {
+function App() {
+  // player position state
   const [posX1, setPosX1] = useState(150);
   const [posY1, setPosY1] = useState(150);
   const [posX2, setPosX2] = useState(50);
   const [posY2, setPosY2] = useState(50);
+
+  // collision refs
+  const player1Ref = useRef<HTMLDivElement>(null);
+  const player2Ref = useRef<HTMLDivElement>(null);
+  const borderRef = useRef<HTMLDivElement>(null);
+
+  // other state
   const [moving, setMoving] = useState(false);
   const [direction, setDirection] = useState('');
   const [playerCount, setPlayerCount] = useState(0);
   const [playerId, setPlayerId] = useState(0);
 
-  const player1Ref = useRef<HTMLDivElement>(null);
-  const player2Ref = useRef<HTMLDivElement>(null);
-  const borderRef = useRef<HTMLDivElement>(null);
+  const directionMap: { [key: string]: string } = {
+    ArrowUp: 'n',
+    ArrowDown: 's',
+    ArrowRight: 'e',
+    ArrowLeft: 'w',
+    w: 'n',
+    a: 'w',
+    s: 's',
+    d: 'e',
+  };
 
-  const validKeys = new Set([
-    'ArrowUp',
-    'ArrowDown',
-    'ArrowRight',
-    'ArrowLeft',
-    'w',
-    'a',
-    's',
-    'd',
-  ]);
+  const isValidDirection = (key: string, dir: string) =>
+    ((key === 'ArrowUp' || key === 'w') && !dir.includes('n')) ||
+    ((key === 'ArrowDown' || key === 's') && !dir.includes('s')) ||
+    ((key === 'ArrowRight' || key === 'd') && !dir.includes('e')) ||
+    ((key === 'ArrowLeft' || key === 'a') && !dir.includes('w'));
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (validKeys.has(e.key)) {
+    if (isValidDirection(e.key, direction)) {
       setMoving(true);
-      if (
-        (e.key === 'ArrowUp' || e.key === 'w') &&
-        direction.indexOf('n') === -1
-      ) {
-        setDirection(direction + 'n');
-      } else if (
-        (e.key === 'ArrowDown' || e.key === 's') &&
-        direction.indexOf('s') === -1
-      ) {
-        setDirection(direction + 's');
-      } else if (
-        (e.key === 'ArrowRight' || e.key === 'd') &&
-        direction.indexOf('e') === -1
-      ) {
-        setDirection(direction + 'e');
-      } else if (
-        (e.key === 'ArrowLeft' || e.key === 'a') &&
-        direction.indexOf('w') === -1
-      ) {
-        setDirection(direction + 'w');
-      }
+      setDirection(direction + directionMap[e.key]);
     }
   };
 
   const handleKeyUp = (e: KeyboardEvent) => {
-    if (validKeys.has(e.key)) {
-      if (e.key === 'ArrowUp' || e.key === 'w') {
-        const i = direction.indexOf('n');
-        setDirection(direction.substring(0, i) + direction.substring(i + 1));
-      } else if (e.key === 'ArrowDown' || e.key === 's') {
-        const i = direction.indexOf('s');
-        setDirection(direction.substring(0, i) + direction.substring(i + 1));
-      } else if (e.key === 'ArrowRight' || e.key === 'd') {
-        const i = direction.indexOf('e');
-        setDirection(direction.substring(0, i) + direction.substring(i + 1));
-      } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-        const i = direction.indexOf('w');
-        setDirection(direction.substring(0, i) + direction.substring(i + 1));
-      }
+    const mappedDirection = directionMap[e.key];
+    if (mappedDirection) {
+      const i = direction.indexOf(mappedDirection);
+      setDirection(direction.slice(0, i) + direction.slice(i + 1));
       if (direction.length === 0) {
         setMoving(false);
       }
@@ -86,28 +66,46 @@ function Game() {
     const playerHitBox = playerDiv!.getBoundingClientRect();
     const borderHitBox = borderDiv!.getBoundingClientRect();
 
+    const checkCollision = (side: keyof DOMRect) =>
+      playerHitBox[side] <= +borderHitBox[side] + borderBuffer;
+
+    const checkCollisionAlt = (side: keyof DOMRect) =>
+      playerHitBox[side] >= +borderHitBox[side] - borderBuffer;
+
     let borderDetected = new Set<string>();
-    if (playerHitBox.left <= borderHitBox.left + borderBuffer) {
+    if (checkCollision('left')) {
       borderDetected.add('w');
     } else {
       borderDetected.delete('w');
     }
-    if (playerHitBox.right >= borderHitBox.right - borderBuffer) {
+    if (checkCollisionAlt('right')) {
       borderDetected.add('e');
     } else {
       borderDetected.delete('e');
     }
-    if (playerHitBox.bottom >= borderHitBox.bottom - borderBuffer) {
+    if (checkCollisionAlt('bottom')) {
       borderDetected.add('s');
     } else {
       borderDetected.delete('s');
     }
-    if (playerHitBox.top <= borderHitBox.top + borderBuffer) {
+    if (checkCollision('top')) {
       borderDetected.add('n');
     } else {
       borderDetected.delete('n');
     }
     return borderDetected;
+  };
+
+  const updatePlayerPosition = (dx: number, dy: number) => {
+    if (playerId === 1) {
+      setPosX1(posX1 + dx);
+      setPosY1(posY1 + dy);
+      socket.emit('updatePlayer1', { x: posX1, y: posY1 });
+    } else {
+      setPosX2(posX2 + dx);
+      setPosY2(posY2 + dy);
+      socket.emit('updatePlayer2', { x: posX2, y: posY2 });
+    }
   };
 
   const move = () => {
@@ -166,22 +164,13 @@ function Game() {
           dy += diagspd;
           dx -= diagspd;
         }
-      } else {
-        setMoving(false);
       }
     } else if (l === 0 || l > 2) {
       setMoving(false);
+      return;
     }
 
-    if (playerId === 1) {
-      setPosX1(posX1 + dx);
-      setPosY1(posY1 + dy);
-      socket.emit('updatePlayer1', { x: posX1, y: posY1 });
-    } else {
-      setPosX2(posX2 + dx);
-      setPosY2(posY2 + dy);
-      socket.emit('updatePlayer2', { x: posX2, y: posY2 });
-    }
+    updatePlayerPosition(dx, dy);
   };
 
   // socket listener
@@ -264,4 +253,4 @@ function Game() {
   }
 }
 
-export default Game;
+export default App;
