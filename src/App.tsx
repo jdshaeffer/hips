@@ -37,6 +37,15 @@ function App() {
     d: 'e',
   };
 
+  const validPunchDirection = () => {
+    let dir = direction.slice(0, 2);
+    if (dir === 'ew' || dir === 'we' || dir === 'sn' || dir === 'ns') {
+      return direction[1];
+    } else {
+      return dir;
+    }
+  };
+
   const isValidDirection = (key: string, dir: string) =>
     ((key === 'ArrowUp' || key === 'w') && !dir.includes('n')) ||
     ((key === 'ArrowDown' || key === 's') && !dir.includes('s')) ||
@@ -52,7 +61,7 @@ function App() {
       setPunching(true);
       setTimeout(() => {
         setPunching(false);
-      }, 100);
+      }, 150);
     }
   };
 
@@ -261,7 +270,9 @@ function App() {
         )}
         {punching && (
           <PunchLine
-            punchDirection={direction === '' ? lastDirection : direction}
+            punchDirection={
+              direction === '' ? lastDirection : validPunchDirection()
+            }
             posX={posX1}
             posY={posY1}
             color='white'
