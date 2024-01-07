@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
+import PunchLine from './PunchLine';
 import './App.css';
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
@@ -19,7 +20,9 @@ function App() {
 
   // other state
   const [moving, setMoving] = useState(false);
+  const [punching, setPunching] = useState(false);
   const [direction, setDirection] = useState('');
+  const [lastDirection, setLastDirection] = useState('n');
   const [playerCount, setPlayerCount] = useState(0);
   const [playerId, setPlayerId] = useState(0);
 
@@ -34,6 +37,15 @@ function App() {
     d: 'e',
   };
 
+  const validPunchDirection = () => {
+    let dir = direction.slice(0, 2);
+    if (dir === 'ew' || dir === 'we' || dir === 'sn' || dir === 'ns') {
+      return direction[1];
+    } else {
+      return dir;
+    }
+  };
+
   const isValidDirection = (key: string, dir: string) =>
     ((key === 'ArrowUp' || key === 'w') && !dir.includes('n')) ||
     ((key === 'ArrowDown' || key === 's') && !dir.includes('s')) ||
@@ -44,10 +56,18 @@ function App() {
     if (isValidDirection(e.key, direction)) {
       setMoving(true);
       setDirection(direction + directionMap[e.key]);
+    } else if (e.key === ' ') {
+      if (e.repeat) return;
+      setPunching(true);
+      setTimeout(() => {
+        setPunching(false);
+      }, 150);
     }
   };
 
   const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === ' ') return;
+    setLastDirection(direction);
     const mappedDirection = directionMap[e.key];
     if (mappedDirection) {
       const i = direction.indexOf(mappedDirection);
@@ -67,10 +87,10 @@ function App() {
     const borderHitBox = borderDiv!.getBoundingClientRect();
 
     const checkCollision = (side: keyof DOMRect) =>
-      playerHitBox[side] <= +borderHitBox[side] + borderBuffer;
+      +playerHitBox[side] <= +borderHitBox[side] + borderBuffer;
 
     const checkCollisionAlt = (side: keyof DOMRect) =>
-      playerHitBox[side] >= +borderHitBox[side] - borderBuffer;
+      +playerHitBox[side] >= +borderHitBox[side] - borderBuffer;
 
     let borderDetected = new Set<string>();
     if (checkCollision('left')) {
@@ -246,6 +266,16 @@ function App() {
               padding: '10px',
               border: '2px solid red',
             }}
+          />
+        )}
+        {punching && (
+          <PunchLine
+            punchDirection={
+              direction === '' ? lastDirection : validPunchDirection()
+            }
+            posX={posX1}
+            posY={posY1}
+            color='white'
           />
         )}
       </div>

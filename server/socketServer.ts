@@ -31,6 +31,7 @@ let playerCount = 0;
 const socketToPlayerId = new Map<number, string>();
 
 io.on('connection', (socket: SocketData) => {
+  console.log('socket server connected to client');
   playerCount += 1;
   io.emit('playerCountUpdate', playerCount);
   if (playerCount < 3) {

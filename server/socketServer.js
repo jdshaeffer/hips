@@ -13,9 +13,11 @@ const socketConfig = process.env.NODE_ENV === 'prod'
     };
 const io = new socket_io_1.Server(socketConfig);
 let playerCount = 0;
-// the Map object holds key-value pairs and remembers the original insertion order of the keys
+// NOTE: the Map object holds key-value pairs
+// and remembers the original insertion order of the keys
 const socketToPlayerId = new Map();
 io.on('connection', (socket) => {
+    console.log('socket server connected to client');
     playerCount += 1;
     io.emit('playerCountUpdate', playerCount);
     if (playerCount < 3) {
