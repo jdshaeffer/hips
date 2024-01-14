@@ -12,6 +12,10 @@ function App() {
   const [posY1, setPosY1] = useState(150);
   const [posX2, setPosX2] = useState(50);
   const [posY2, setPosY2] = useState(50);
+  const [p1Punching, setP1Punching] = useState(false);
+  const [p2Punching, setP2Punching] = useState(false);
+  const [p1PunchDirection, setP1PunchDirection] = useState('');
+  const [p2PunchDirection, setP2PunchDirection] = useState('');
 
   // collision refs
   const player1Ref = useRef<HTMLDivElement>(null);
@@ -20,7 +24,6 @@ function App() {
 
   // other state
   const [moving, setMoving] = useState(false);
-  const [punching, setPunching] = useState(false);
   const [direction, setDirection] = useState('');
   const [lastDirection, setLastDirection] = useState('n');
   const [playerCount, setPlayerCount] = useState(0);
@@ -58,9 +61,13 @@ function App() {
       setDirection(direction + directionMap[e.key]);
     } else if (e.key === ' ') {
       if (e.repeat) return;
-      setPunching(true);
+      const punchDirection =
+        direction === '' ? lastDirection : validPunchDirection();
+      // emitting pattern where the socket controls the state:
+      // key press emits the event, the socket server emits back to all clients
+      socket.emit(`p${playerId}Punching`, true, punchDirection);
       setTimeout(() => {
-        setPunching(false);
+        socket.emit(`p${playerId}Punching`, false, '');
       }, 150);
     }
   };
@@ -120,11 +127,11 @@ function App() {
     if (playerId === 1) {
       setPosX1(posX1 + dx);
       setPosY1(posY1 + dy);
-      socket.emit('updatePlayer1', { x: posX1, y: posY1 });
+      socket.emit('p1Moving', { x: posX1, y: posY1 });
     } else {
       setPosX2(posX2 + dx);
       setPosY2(posY2 + dy);
-      socket.emit('updatePlayer2', { x: posX2, y: posY2 });
+      socket.emit('p2Moving', { x: posX2, y: posY2 });
     }
   };
 
@@ -207,13 +214,21 @@ function App() {
     socket.on('assignPlayerId', (id: number) => {
       setPlayerId(id);
     });
-    socket.on('updatePlayer1', (pos) => {
+    socket.on('p1Moving', (pos) => {
       setPosX1(pos.x);
       setPosY1(pos.y);
     });
-    socket.on('updatePlayer2', (pos) => {
+    socket.on('p2Moving', (pos) => {
       setPosX2(pos.x);
       setPosY2(pos.y);
+    });
+    socket.on('p1Punching', (isPunching, punchDirection) => {
+      setP1Punching(isPunching);
+      setP1PunchDirection(punchDirection);
+    });
+    socket.on('p2Punching', (isPunching, punchDirection) => {
+      setP2Punching(isPunching);
+      setP2PunchDirection(punchDirection);
     });
     socket.on('display', (res: string) => {
       console.log(res);
@@ -268,14 +283,20 @@ function App() {
             }}
           />
         )}
-        {punching && (
+        {p1Punching && (
           <PunchLine
-            punchDirection={
-              direction === '' ? lastDirection : validPunchDirection()
-            }
+            punchDirection={p1PunchDirection}
             posX={posX1}
             posY={posY1}
             color='white'
+          />
+        )}
+        {p2Punching && (
+          <PunchLine
+            punchDirection={p2PunchDirection}
+            posX={posX2}
+            posY={posY2}
+            color='red'
           />
         )}
       </div>
