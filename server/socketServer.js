@@ -24,17 +24,25 @@ io.on('connection', (socket) => {
         socketToPlayerId.set(playerCount, socket.id);
         // emit only back to sender to issue playerId
         socket.emit('assignPlayerId', playerCount);
-        socket.on('updatePlayer1', (pos) => {
-            socket.broadcast.emit('updatePlayer1', pos);
+        socket.on('p1Moving', (pos) => {
+            // to all clients except sender
+            socket.broadcast.emit('p1Moving', pos);
         });
-        socket.on('updatePlayer2', (pos) => {
-            socket.broadcast.emit('updatePlayer2', pos);
+        socket.on('p2Moving', (pos) => {
+            socket.broadcast.emit('p2Moving', pos);
+        });
+        socket.on('p1Punching', (isPunching, punchDirection) => {
+            // to all connected clients
+            io.emit('p1Punching', isPunching, punchDirection);
+        });
+        socket.on('p2Punching', (isPunching, punchDirection) => {
+            io.emit('p2Punching', isPunching, punchDirection);
         });
     }
     socket.on('disconnect', () => {
         playerCount -= 1;
         socketToPlayerId.set(playerCount, socket.id);
-        // need to emit to the remaining player that they're now player1
+        // need to emit to the remaining player that they're now player1 when player1 disconnects
         socket.broadcast.emit('assignPlayerId', playerCount);
         io.emit('playerCountUpdate', playerCount);
     });
