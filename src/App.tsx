@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
 import PunchLine from './PunchLine';
+import getMoveDirection from './getMoveDirection';
 import './App.css';
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
@@ -136,67 +137,11 @@ function App() {
   };
 
   const move = () => {
-    let dx = 0;
-    let dy = 0;
-    const speed = 2;
-    const diagspd = 1.4;
-
-    const borderCollision = checkBorderCollision();
-    const l = direction.length;
-
-    if (l === 1) {
-      if (direction === 'n' && !borderCollision.has('n')) {
-        dy -= speed;
-      } else if (direction === 's' && !borderCollision.has('s')) {
-        dy += speed;
-      } else if (direction === 'w' && !borderCollision.has('w')) {
-        dx -= speed;
-      } else if (direction === 'e' && !borderCollision.has('e')) {
-        dx += speed;
-      }
-    } else if (l === 2) {
-      if (direction === 'ne' || direction === 'en') {
-        if (borderCollision.has('n') && !borderCollision.has('e')) {
-          dx += speed;
-        } else if (borderCollision.has('e') && !borderCollision.has('n')) {
-          dy -= speed;
-        } else if (!borderCollision.has('n') && !borderCollision.has('e')) {
-          dy -= diagspd;
-          dx += diagspd;
-        }
-      } else if (direction === 'nw' || direction === 'wn') {
-        if (borderCollision.has('n') && !borderCollision.has('w')) {
-          dx -= speed;
-        } else if (borderCollision.has('w') && !borderCollision.has('n')) {
-          dy -= speed;
-        } else if (!borderCollision.has('n') && !borderCollision.has('w')) {
-          dy -= diagspd;
-          dx -= diagspd;
-        }
-      } else if (direction === 'se' || direction === 'es') {
-        if (borderCollision.has('s') && !borderCollision.has('e')) {
-          dx += speed;
-        } else if (borderCollision.has('e') && !borderCollision.has('s')) {
-          dy += speed;
-        } else if (!borderCollision.has('s') && !borderCollision.has('e')) {
-          dy += diagspd;
-          dx += diagspd;
-        }
-      } else if (direction === 'sw' || direction === 'ws') {
-        if (borderCollision.has('s') && !borderCollision.has('w')) {
-          dx -= speed;
-        } else if (borderCollision.has('w') && !borderCollision.has('s')) {
-          dy += speed;
-        } else if (!borderCollision.has('s') && !borderCollision.has('w')) {
-          dy += diagspd;
-          dx -= diagspd;
-        }
-      }
-    } else if (l === 0 || l > 2) {
+    const [dx, dy] = getMoveDirection(direction, checkBorderCollision());
+    if (direction.length === 0) {
       setMoving(false);
       return;
     }
-
     updatePlayerPosition(dx, dy);
   };
 

@@ -8,10 +8,6 @@ interface Props {
 }
 
 function PunchLine({ punchDirection, posX, posY, color }: Props) {
-  useEffect(() => {
-    console.log({ punchDirection });
-  }, [punchDirection]);
-
   const punchDirectionMap = {
     n: { top: posY - 10, left: posX },
     e: { top: posY + 11, left: posX + 21, transform: 'rotate(90deg)' },
