@@ -203,48 +203,61 @@ function App() {
     );
   } else {
     return (
-      <div ref={borderRef} className='center-box'>
-        <div
-          id='player1'
-          ref={player1Ref}
-          className='player'
-          style={{
-            top: posY1,
-            left: posX1,
-            padding: '10px',
-            border: '2px solid white',
-          }}
-        />
-        {playerCount > 1 && (
+      <>
+        <div ref={borderRef} className='center-box'>
           <div
-            id='player2'
-            ref={player2Ref}
+            id='player1'
+            ref={player1Ref}
             className='player'
             style={{
-              top: posY2,
-              left: posX2,
+              top: posY1,
+              left: posX1,
               padding: '10px',
-              border: '2px solid red',
+              border: '2px solid white',
             }}
           />
-        )}
-        {p1Punching && (
-          <PunchLine
-            punchDirection={p1PunchDirection}
-            posX={posX1}
-            posY={posY1}
-            color='white'
-          />
-        )}
-        {p2Punching && (
-          <PunchLine
-            punchDirection={p2PunchDirection}
-            posX={posX2}
-            posY={posY2}
-            color='red'
-          />
-        )}
-      </div>
+          {playerCount > 1 && (
+            <div
+              id='player2'
+              ref={player2Ref}
+              className='player'
+              style={{
+                top: posY2,
+                left: posX2,
+                padding: '10px',
+                border: '2px solid red',
+              }}
+            />
+          )}
+          {p1Punching && (
+            <PunchLine
+              punchDirection={p1PunchDirection}
+              posX={posX1}
+              posY={posY1}
+              color='white'
+            />
+          )}
+          {p2Punching && (
+            <PunchLine
+              punchDirection={p2PunchDirection}
+              posX={posX2}
+              posY={posY2}
+              color='red'
+            />
+          )}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            color: 'white',
+          }}
+        >
+          <h2>🚧 under construction 🚧</h2>
+          <p>use arrow/wasd to move, space to "punch"</p>
+        </div>
+      </>
     );
   }
 }
