@@ -1,11 +1,12 @@
 interface Props {
+  punchRef: React.RefObject<HTMLDivElement>;
   punchDirection: string;
   posX: number;
   posY: number;
   color: string;
 }
 
-function PunchLine({ punchDirection, posX, posY, color }: Props) {
+function PunchLine({ punchRef, punchDirection, posX, posY, color }: Props) {
   const punchDirectionMap = {
     n: { top: posY - 10, left: posX },
     e: { top: posY + 11, left: posX + 21, transform: 'rotate(90deg)' },
@@ -23,6 +24,7 @@ function PunchLine({ punchDirection, posX, posY, color }: Props) {
 
   return (
     <div
+      ref={punchRef}
       className='punch-line'
       style={{
         ...punchDirectionMap[punchDirection as keyof typeof punchDirectionMap],
