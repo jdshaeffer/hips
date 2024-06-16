@@ -15,12 +15,15 @@ function App() {
   const [posY2, setPosY2] = useState(50);
   const [p1Punching, setP1Punching] = useState(false);
   const [p2Punching, setP2Punching] = useState(false);
+  const [punchDiv, setPunchDiv] = useState<HTMLDivElement | null>(null);
   const [p1PunchDirection, setP1PunchDirection] = useState('');
   const [p2PunchDirection, setP2PunchDirection] = useState('');
 
   // collision refs
-  const player1Ref = useRef<HTMLDivElement>(null);
-  const player2Ref = useRef<HTMLDivElement>(null);
+  const p1Ref = useRef<HTMLDivElement>(null);
+  const p2Ref = useRef<HTMLDivElement>(null);
+  const p1PunchRef = useRef<HTMLDivElement>(null);
+  const p2PunchRef = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
 
   // other state
@@ -86,40 +89,87 @@ function App() {
     }
   };
 
+  const getPlayerRefInfo = () => {
+    if (p1Ref || p2Ref) {
+      const playerDiv = playerId === 1 ? p1Ref.current : p2Ref.current;
+      return playerDiv!.getBoundingClientRect();
+    }
+  };
+
+  const getOpponentRefInfo = () => {
+    // optional since there may just be p1 running around, no p2 present
+    const opponentDiv = playerId === 1 ? p2Ref.current : p1Ref.current;
+    const opponentHitBox = opponentDiv
+      ? opponentDiv.getBoundingClientRect()
+      : null;
+    return opponentHitBox;
+  };
+
+  const checkPunchCollision = () => {
+    const punchHitBox = punchDiv?.getBoundingClientRect();
+    if (punchHitBox) {
+      const {
+        bottom: pBottom,
+        top: pTop,
+        left: pLeft,
+        right: pRight,
+      } = punchHitBox;
+      if (pBottom && pTop && pLeft && pRight) {
+        const opponentHitBox = getOpponentRefInfo();
+        if (opponentHitBox) {
+          const {
+            bottom: oBottom,
+            top: oTop,
+            left: oLeft,
+            right: oRight,
+          } = opponentHitBox;
+          if (
+            (pLeft >= oLeft || pRight >= oLeft) &&
+            (pLeft <= oRight || pRight <= oRight) &&
+            (pBottom <= oBottom || pTop <= oBottom) &&
+            (pBottom >= oTop || pTop >= oTop)
+          ) {
+            console.log('punch!');
+          }
+        }
+      }
+    }
+  };
+
   const checkBorderCollision = () => {
     const borderBuffer = 4;
-    const playerDiv = playerId === 1 ? player1Ref.current : player2Ref.current;
+    const playerHitBox = getPlayerRefInfo();
     const borderDiv = borderRef.current;
-
-    const playerHitBox = playerDiv!.getBoundingClientRect();
     const borderHitBox = borderDiv!.getBoundingClientRect();
 
-    const checkCollision = (side: keyof DOMRect) =>
-      +playerHitBox[side] <= +borderHitBox[side] + borderBuffer;
-
-    const checkCollisionAlt = (side: keyof DOMRect) =>
-      +playerHitBox[side] >= +borderHitBox[side] - borderBuffer;
-
     let borderDetected = new Set<string>();
-    if (checkCollision('left')) {
-      borderDetected.add('w');
-    } else {
-      borderDetected.delete('w');
-    }
-    if (checkCollisionAlt('right')) {
-      borderDetected.add('e');
-    } else {
-      borderDetected.delete('e');
-    }
-    if (checkCollisionAlt('bottom')) {
-      borderDetected.add('s');
-    } else {
-      borderDetected.delete('s');
-    }
-    if (checkCollision('top')) {
-      borderDetected.add('n');
-    } else {
-      borderDetected.delete('n');
+    if (playerHitBox) {
+      const checkCollision = (side: keyof DOMRect) =>
+        +playerHitBox[side] <= +borderHitBox[side] + borderBuffer;
+
+      const checkCollisionAlt = (side: keyof DOMRect) =>
+        +playerHitBox[side] >= +borderHitBox[side] - borderBuffer;
+
+      if (checkCollision('left')) {
+        borderDetected.add('w');
+      } else {
+        borderDetected.delete('w');
+      }
+      if (checkCollisionAlt('right')) {
+        borderDetected.add('e');
+      } else {
+        borderDetected.delete('e');
+      }
+      if (checkCollisionAlt('bottom')) {
+        borderDetected.add('s');
+      } else {
+        borderDetected.delete('s');
+      }
+      if (checkCollision('top')) {
+        borderDetected.add('n');
+      } else {
+        borderDetected.delete('n');
+      }
     }
     return borderDetected;
   };
@@ -144,6 +194,18 @@ function App() {
     }
     updatePlayerPosition(dx, dy);
   };
+
+  // punch collision detection, done here since we need to assert the ref is present, and it's only present in temporary bursts
+  // need to have it run on every render since we need to check during the whole time the punch is present
+  useEffect(() => {
+    if (p1Punching || p2Punching) {
+      const punchDiv = p1Punching ? p1PunchRef.current : p2PunchRef.current;
+      if (punchDiv) {
+        setPunchDiv(punchDiv);
+        checkPunchCollision();
+      }
+    }
+  });
 
   // socket listener
   useEffect(() => {
@@ -207,7 +269,7 @@ function App() {
         <div ref={borderRef} className='center-box'>
           <div
             id='player1'
-            ref={player1Ref}
+            ref={p1Ref}
             className='player'
             style={{
               top: posY1,
@@ -219,7 +281,7 @@ function App() {
           {playerCount > 1 && (
             <div
               id='player2'
-              ref={player2Ref}
+              ref={p2Ref}
               className='player'
               style={{
                 top: posY2,
@@ -231,6 +293,7 @@ function App() {
           )}
           {p1Punching && (
             <PunchLine
+              punchRef={p1PunchRef}
               punchDirection={p1PunchDirection}
               posX={posX1}
               posY={posY1}
@@ -239,6 +302,7 @@ function App() {
           )}
           {p2Punching && (
             <PunchLine
+              punchRef={p2PunchRef}
               punchDirection={p2PunchDirection}
               posX={posX2}
               posY={posY2}
