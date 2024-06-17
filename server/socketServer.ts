@@ -26,18 +26,24 @@ const io = new Server(socketConfig);
 // and remembers the original insertion order of the keys
 // const socketToPlayerId = new Map<number, string>();
 const playerData = new Map<string, PlayerData>();
-// const playerData: [Player] = [];
+const playerClients: string[] = [];
 
 io.on('connection', (socket: SocketData) => {
-  socket.broadcast.emit('playerConnect', socket.id);
+  playerClients.push(socket.id);
+  socket.emit('playerAssignment', socket.id);
+  io.emit('playerConnect', playerClients);
 
   socket.on(`playerUpdate${socket.id}`, () => {
-    socket.broadcast.emit(`playerUpdate${socket.id}`, playerData.get(socket.id));
+    socket.broadcast.emit(
+      `playerUpdate${socket.id}`,
+      playerData.get(socket.id)
+    );
   });
-  
+
   socket.on('disconnect', () => {
-    playerData.delete(socket.id);
-    io.emit('playerDisconnect', socket.id);
+    const i = playerClients.indexOf(socket.id);
+    playerClients.splice(i, 1);
+    io.emit('playerDisconnect', playerClients);
   });
 });
 
