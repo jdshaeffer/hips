@@ -5,12 +5,13 @@ import PunchLine from './PunchLine';
 import getMoveDirection from './getMoveDirection';
 import './App.css';
 import { PlayerData } from '../models/PlayerData';
+import { PosData } from '../models/PosData';
 
 interface Props {
   borderRef: any;
   socket: Socket<DefaultEventsMap, DefaultEventsMap>;
   isRemote: boolean; // only needed when this player component belongs to a remote client
-  clientId: ''; // only needed when this player component belongs to a remote client
+  clientId: string; // only needed when this player component belongs to a remote client
 }
 
 // function Player(isLocal = true, socketId = "") {
@@ -148,12 +149,29 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
     }
   };
 
+  const emitPlayerUpdate = () => {
+    if (socket !== undefined && !isRemote)
+      socket.emit(`playerUpdate${socket.id}`, {
+        pos: {
+          x,
+          y,
+          dir: direction,
+        },
+        id: socket.id,
+        color: color,
+        name: name,
+      });
+  };
+
+  const emitPositionUpdate = () => {
+    if (socket !== undefined && !isRemote)
+      socket.emit(`positionUpdate${socket.id}`, { x, y, dir: direction });
+  };
+
   const updatePlayerPosition = (dx: number, dy: number) => {
     setX(x + dx);
     setY(y + dy);
-
-    // if (socket !== undefined)
-    //   socket.emit(`updatePlayer${socket.id}`, playerData);
+    // emitPositionUpdate();
   };
 
   const randColor = () => {
@@ -165,11 +183,37 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
   useEffect(() => {
     const color = randColor();
     setColor(color);
+    if (!isRemote) {
+      emitPlayerUpdate();
+    } else {
+      socket.on(`playerUpdate${clientId}`, (playerChanges: PlayerData) => {
+        if (playerChanges.pos.x !== x) setX(playerChanges.pos.x);
+        if (playerChanges.pos.y !== y) setY(playerChanges.pos.y);
+        if (playerChanges.pos.dir !== direction)
+          setDirection(playerChanges.pos.dir);
+        if (playerChanges.color !== color) {
+          setColor(color);
+        }
+      });
+      socket.on(`positionUpdate${clientId}`, (posChanges: PosData) => {
+        if (posChanges.x !== x) setX(posChanges.x);
+        if (posChanges.y !== y) setY(posChanges.y);
+        if (posChanges.dir !== direction) setDirection(posChanges.dir);
+      });
+      
+      // request initial data for player
+      socket.emit(`requestCacheDump${socket.id}`);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!isRemote) {
+      emitPlayerUpdate();
+    }
+  }, [color, name, x, y, direction]);
 
   // Initialize
   useEffect(() => {
-
     if (!isRemote) {
       window.addEventListener('keydown', handleKeyDown);
       window.addEventListener('keyup', handleKeyUp);
@@ -177,13 +221,6 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('keyup', handleKeyUp);
       };
-    } else {
-      socket.on(`playerUpdate${clientId}`, (pDataChanges: PlayerData) => {
-        if (pDataChanges.x !== x)
-          setX(pDataChanges.x);
-        if (pDataChanges.y !== y)
-          setY(pDataChanges.y);
-      });
     }
   }, [handleKeyDown, handleKeyUp]);
 

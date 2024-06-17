@@ -9,24 +9,26 @@ let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
 function App() {
   const borderRef = useRef<HTMLDivElement>(null);
   const [clients, setClients] = useState<string[]>([]);
-  const [num, setNum] = useState(0);
-  console.log('clients!!!', clients);
+  const [socketError, setSocketError] = useState<boolean>(false);
+  const [connected, setConnected] = useState<boolean>(true);
 
-  const addClient = (clientId: string) => {
-    if (!clients.includes(clientId)) {
-      console.log('playerConnect', clientId, clients, num);
-      console.log(clients.concat([clientId]));
-      setClients(clients.concat([clientId]));
-      setNum(num + 1);
+  const onSocketConnect = () => {
+    if (socketError || !connected) {
+      console.log("Socket reconnected!");
+      socket.emit("requestCacheDump");
     }
+    
+    setSocketError(false);
+    setConnected(true);
   };
 
-  const removeClient = (clientId: string) => {
-    if (clients.includes(clientId)) {
-      console.log('playerDisconnect', clientId);
-      setClients(clients.filter((id) => id !== clientId));
-      setNum(num - 1);
-    }
+  const onSocketError = (err: any) => {
+    console.error('Error occured with socket.io', err);
+    setSocketError(true);
+  };
+
+  const onSocketDisconnect = () => {
+    setConnected(false);
   };
 
   useEffect(() => {
@@ -36,8 +38,22 @@ function App() {
             path: '/socket.io',
           })
         : io('http://localhost:3001');
-    socket.on('playerConnect', (id) => addClient(id));
-    socket.on('playerDisconnect', (id) => removeClient(id));
+
+    // status
+    socket.on('connect_error', onSocketError);
+    socket.on('reconnect_error', onSocketError);
+    socket.on('reconnect_failure', onSocketError);
+    socket.on('error', onSocketError);
+
+    socket.on('connect', onSocketConnect);
+    socket.on('reconnect', onSocketConnect);
+    socket.on('disconnect', onSocketDisconnect);
+
+    // data updating
+    socket.on('clientUpdate', (clientIds: string[]) => {
+      setClients(clientIds);
+      socket.emit('requestCacheDump');
+    });
   }, []);
 
   return (
@@ -47,8 +63,21 @@ function App() {
           borderRef={borderRef}
           socket={socket}
           isRemote={false}
-          clientId=''
+          clientId={''}
         />
+        {clients
+          ?.filter((id) => socket !== undefined && id !== socket.id)
+          .map((id: string) => {
+            return (
+              <Player
+                key={id}
+                borderRef={borderRef}
+                socket={socket}
+                isRemote={true}
+                clientId={id}
+              />
+            );
+          })}
       </div>
       <div
         style={{
@@ -60,7 +89,22 @@ function App() {
       >
         <h2>🚧 under construction 🚧</h2>
         <p>use arrow/wasd to move, space to "punch"</p>
-        Connected clients: {clients.map((id: any) => `${id},`)}
+        Connected clients:{' '}
+        {clients?.map((id: any) => {
+          if (socket === undefined || id !== socket.id) return id + ', ';
+          // is this local client id
+          else
+            return (
+              <i key={id} className='local-client-id'>
+                {id} (self),{' '}
+              </i>
+            );
+        })}
+      </div>
+      <div
+        className='network-status'
+      >
+        {connected ? '' : (socketError ? '🟥' : '🟧')}
       </div>
     </>
   );
