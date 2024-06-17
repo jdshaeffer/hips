@@ -31,10 +31,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    console.log({ playerId });
-  }, [playerId]);
-
-  useEffect(() => {
     const i = clients.indexOf(playerId);
     setPlayerIndex(i + 1);
   }, [clients]);

@@ -31,8 +31,6 @@ const playerClients: string[] = [];
 io.on('connection', (socket: SocketData) => {
   playerClients.push(socket.id);
   socket.emit('playerAssignment', socket.id);
-
-  console.log(playerClients);
   io.emit('playerConnect', playerClients);
 
   socket.on(`playerUpdate${socket.id}`, () => {
@@ -45,7 +43,6 @@ io.on('connection', (socket: SocketData) => {
   socket.on('disconnect', () => {
     const i = playerClients.indexOf(socket.id);
     playerClients.splice(i, 1);
-    console.log(playerClients);
     io.emit('playerDisconnect', playerClients);
   });
 });
