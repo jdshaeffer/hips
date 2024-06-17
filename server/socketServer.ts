@@ -3,12 +3,6 @@ import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { PlayerData } from '../models/PlayerData';
 import { PosData } from '../models/PosData';
 
-const randColor = () => {
-  return (
-    '#' + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, '0')
-  );
-};
-
 const getClientIds = (): string[] => {
   return Array.from(io.of('/').sockets.keys());
 }
@@ -72,6 +66,10 @@ io.on('connection', (socket: SocketData) => {
   
   // Purpose: update all clients with entire player values
   socket.on(`playerUpdate${socket.id}`, (pd: PlayerData) => {
+    console.log(`color: ${pd.color}`);
+    if (playerData[socket.id].color !== pd.color)
+      console.log(`colorUpdate from ${playerData[socket.id].color} to ${pd.color} on client ${socket.id}`);
+    
     playerData[socket.id] = pd;
     socket.broadcast.emit(`playerUpdate${socket.id}`, pd);
   });

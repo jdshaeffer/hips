@@ -150,7 +150,8 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
   };
 
   const emitPlayerUpdate = () => {
-    if (socket !== undefined && !isRemote)
+    if (socket !== undefined && !isRemote) {
+      console.log(`emitPlayerUpdate(color: ${color})`);
       socket.emit(`playerUpdate${socket.id}`, {
         pos: {
           x,
@@ -161,6 +162,9 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         color: color,
         name: name,
       });
+    } else {
+      console.log("other! ", clientId, !isRemote, socket);
+    }
   };
 
   const emitPositionUpdate = () => {
@@ -176,15 +180,23 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
 
   const randColor = () => {
     return (
-      '#' + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, '0')
+      '#' + (((Math.random() * 0x888888) + 0x888888) << 0).toString(16).padStart(6, '0')
     );
   };
 
   useEffect(() => {
-    const color = randColor();
-    setColor(color);
+    console.log("color changed!");
+    if (!isRemote) emitPlayerUpdate();
+  }, [color, name]);
+
+  useEffect(() => {
+    if (!isRemote) emitPositionUpdate();
+  }, [x, y, direction]);
+
+  useEffect(() => {
     if (!isRemote) {
-      emitPlayerUpdate();
+      const color = randColor();
+      setColor(color);
     } else {
       socket.on(`playerUpdate${clientId}`, (playerChanges: PlayerData) => {
         if (playerChanges.pos.x !== x) setX(playerChanges.pos.x);
@@ -192,7 +204,8 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         if (playerChanges.pos.dir !== direction)
           setDirection(playerChanges.pos.dir);
         if (playerChanges.color !== color) {
-          setColor(color);
+          console.log(`colorUpdate from ${color} to ${playerChanges.color} on client ${clientId}`);
+          setColor(playerChanges.color);
         }
       });
       socket.on(`positionUpdate${clientId}`, (posChanges: PosData) => {
@@ -200,17 +213,11 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         if (posChanges.y !== y) setY(posChanges.y);
         if (posChanges.dir !== direction) setDirection(posChanges.dir);
       });
-      
+
       // request initial data for player
       socket.emit(`requestCacheDump${socket.id}`);
     }
-  }, []);
-
-  useEffect(() => {
-    if (!isRemote) {
-      emitPlayerUpdate();
-    }
-  }, [color, name, x, y, direction]);
+  }, [socket]);
 
   // Initialize
   useEffect(() => {
@@ -237,6 +244,7 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         style={{
           top: y,
           left: x,
+          zIndex: y,
           padding: '10px',
           border: `2px solid ${color}`,
         }}
