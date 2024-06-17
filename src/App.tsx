@@ -1,33 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
 import Player from './Player';
-import './App.css';
 import { Socket, io } from 'socket.io-client';
+import './App.css';
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
 
 function App() {
   const borderRef = useRef<HTMLDivElement>(null);
   const [clients, setClients] = useState<string[]>([]);
-  const [num, setNum] = useState(0);
-  console.log('clients!!!', clients);
-
-  const addClient = (clientId: string) => {
-    if (!clients.includes(clientId)) {
-      console.log('playerConnect', clientId, clients, num);
-      console.log(clients.concat([clientId]));
-      setClients(clients.concat([clientId]));
-      setNum(num + 1);
-    }
-  };
-
-  const removeClient = (clientId: string) => {
-    if (clients.includes(clientId)) {
-      console.log('playerDisconnect', clientId);
-      setClients(clients.filter((id) => id !== clientId));
-      setNum(num - 1);
-    }
-  };
+  const [playerIndex, setPlayerIndex] = useState<number>();
+  const [playerId, setPlayerId] = useState<string>('');
 
   useEffect(() => {
     socket =
@@ -36,9 +19,25 @@ function App() {
             path: '/socket.io',
           })
         : io('http://localhost:3001');
-    socket.on('playerConnect', (id) => addClient(id));
-    socket.on('playerDisconnect', (id) => removeClient(id));
+    socket.on('playerConnect', (clientIds) => {
+      setClients(clientIds);
+    });
+    socket.on('playerDisconnect', (clientIds) => {
+      setClients(clientIds);
+    });
+    socket.on('playerAssignment', (playerId: string) => {
+      setPlayerId(playerId);
+    });
   }, []);
+
+  useEffect(() => {
+    console.log({ playerId });
+  }, [playerId]);
+
+  useEffect(() => {
+    const i = clients.indexOf(playerId);
+    setPlayerIndex(i + 1);
+  }, [clients]);
 
   return (
     <>
@@ -60,7 +59,20 @@ function App() {
       >
         <h2>🚧 under construction 🚧</h2>
         <p>use arrow/wasd to move, space to "punch"</p>
-        Connected clients: {clients.map((id: any) => `${id},`)}
+        <p>
+          you are client <span style={{ fontWeight: 'bold' }}>{playerId}</span>,
+          you are player {playerIndex}
+        </p>
+      </div>
+      <div
+        style={{ bottom: 0, position: 'fixed', color: 'white', margin: '1vh' }}
+      >
+        Connected clients:
+        <ul>
+          {clients.map((id) => (
+            <li>{id}</li>
+          ))}
+        </ul>
       </div>
     </>
   );
