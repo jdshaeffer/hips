@@ -70,6 +70,15 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
     ((key === 'ArrowRight' || key === 'd') && !dir.includes('e')) ||
     ((key === 'ArrowLeft' || key === 'a') && !dir.includes('w'));
 
+  const punch = () => {
+    console.log(`[punch] direction: ${direction}, lastDirection: ${lastDirection}`);
+    const punchDirection =
+      direction === '' ? lastDirection : validPunchDirection();
+    setPunchDir(punchDirection);
+    setPunching(true);
+    setTimeout(() => setPunching(false), 150);
+  };
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (isValidDirection(e.key, direction)) {
       setMoving(true);
@@ -77,11 +86,7 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
     }
 
     if (e.key === ' ' && !e.repeat) {
-      const punchDirection =
-        direction === '' ? lastDirection : validPunchDirection();
-      setPunchDir(punchDirection);
-      setTimeout(() => setPunching(false), 150);
-      setPunching(true);
+      punch();
     }
   };
 
@@ -151,7 +156,6 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
 
   const emitPlayerUpdate = () => {
     if (socket !== undefined && !isRemote) {
-      console.log(`emitPlayerUpdate(color: ${color})`);
       socket.emit(`playerUpdate${socket.id}`, {
         pos: {
           x,
@@ -162,9 +166,12 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         color: color,
         name: name,
       });
-    } else {
-      console.log("other! ", clientId, !isRemote, socket);
     }
+  };
+
+  const emitPunchingUpdate = () => {
+    if (socket !== undefined && !isRemote)
+      socket.emit(`punchUpdate${socket.id}`, punching);
   };
 
   const emitPositionUpdate = () => {
@@ -175,19 +182,23 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
   const updatePlayerPosition = (dx: number, dy: number) => {
     setX(x + dx);
     setY(y + dy);
-    // emitPositionUpdate();
   };
 
   const randColor = () => {
     return (
-      '#' + (((Math.random() * 0x888888) + 0x888888) << 0).toString(16).padStart(6, '0')
+      '#' +
+      ((Math.random() * 0x888888 + 0x888888) << 0).toString(16).padStart(6, '0')
     );
   };
 
   useEffect(() => {
-    console.log("color changed!");
     if (!isRemote) emitPlayerUpdate();
   }, [color, name]);
+
+  useEffect(() => {
+    if (!isRemote) emitPunchingUpdate();
+    else if (punching) punch();
+  }, [punching]);
 
   useEffect(() => {
     if (!isRemote) emitPositionUpdate();
@@ -204,14 +215,23 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         if (playerChanges.pos.dir !== direction)
           setDirection(playerChanges.pos.dir);
         if (playerChanges.color !== color) {
-          console.log(`colorUpdate from ${color} to ${playerChanges.color} on client ${clientId}`);
           setColor(playerChanges.color);
         }
       });
       socket.on(`positionUpdate${clientId}`, (posChanges: PosData) => {
         if (posChanges.x !== x) setX(posChanges.x);
         if (posChanges.y !== y) setY(posChanges.y);
-        if (posChanges.dir !== direction) setDirection(posChanges.dir);
+        if (posChanges.dir !== direction) {
+          console.log("assigning dir: ", posChanges.dir, direction);
+          setDirection(posChanges.dir);
+          setLastDirection(posChanges.dir);
+        }
+      });
+      socket.on(`punchUpdate${clientId}`, (isPunching: boolean) => {
+        if (punching !== isPunching) {
+          console.log(`punchUpdate ${clientId}`, isPunching)
+          setPunching(true);
+        }
       });
 
       // request initial data for player
