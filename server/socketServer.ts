@@ -42,12 +42,11 @@ const playerData: { [key: string]: PlayerData } = {};
 io.on('connection', (socket: SocketData) => {
   playerData[socket.id] = {
     pos: {
-      x: 50,
-      y: 50,
+      x: 135,
+      y: 135,
       dir: '',
     },
     name: "bob",
-    id: socket.id,
     color: '#FFFFFF',
   };
 
@@ -61,7 +60,8 @@ io.on('connection', (socket: SocketData) => {
   // Purpose: request getting the entirety of the player values
   socket.on(`requestCacheDump${socket.id}`, () => {
     updateClientIds();
-    Object.values(playerData).forEach((pd: PlayerData) => socket.emit(`playerUpdate${pd.id}`, pd));
+    Object.keys(playerData).forEach((pId: string) => socket.emit(`playerUpdate${pId}`, playerData[pId]));
+    // Object.values(playerData).forEach((pd: PlayerData) => socket.emit(`playerUpdate${pd.id}`, pd));
   });
   
   // Purpose: update all clients with entire player values

@@ -19,21 +19,11 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
   const [punching, setPunching] = useState(false);
   const [punchDir, setPunchDir] = useState('');
 
-  const [id, setId] = useState('');
-  const [x, setX] = useState(50);
-  const [y, setY] = useState(50);
+  const [x, setX] = useState(135);
+  const [y, setY] = useState(135);
   const [name, setName] = useState('Bob');
   const [color, setColor] = useState('#ffffff');
   const [direction, setDirection] = useState('');
-
-  // const [playerData, setPlayerData] = useState({
-  //   id: '',
-  //   color: 'white',
-  //   name: 'Bob',
-  //   dir: '',
-  //   x: 50,
-  //   y: 50,
-  // });
 
   // html ref
   const playerRef = useRef<HTMLDivElement>(null);
@@ -71,7 +61,6 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
     ((key === 'ArrowLeft' || key === 'a') && !dir.includes('w'));
 
   const punch = () => {
-    console.log(`[punch] direction: ${direction}, lastDirection: ${lastDirection}`);
     const punchDirection =
       direction === '' ? lastDirection : validPunchDirection();
     setPunchDir(punchDirection);
@@ -162,7 +151,6 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
           y,
           dir: direction,
         },
-        id: socket.id,
         color: color,
         name: name,
       });
@@ -222,14 +210,12 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
         if (posChanges.x !== x) setX(posChanges.x);
         if (posChanges.y !== y) setY(posChanges.y);
         if (posChanges.dir !== direction) {
-          console.log("assigning dir: ", posChanges.dir, direction);
           setDirection(posChanges.dir);
           setLastDirection(posChanges.dir);
         }
       });
       socket.on(`punchUpdate${clientId}`, (isPunching: boolean) => {
         if (punching !== isPunching) {
-          console.log(`punchUpdate ${clientId}`, isPunching)
           setPunching(true);
         }
       });
