@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
 import Player from './components/Player';
 import RemotePlayer from './components/RemotePlayer';
-import './styles/App.css';
 import { Socket, io } from 'socket.io-client';
+import './styles/App.css';
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
 
