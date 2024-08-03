@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
-import getMoveDirection from './getMoveDirection';
-import './App.css';
+import getMoveDirection from '../hooks/getMoveDirection';
 import Sprite from './Sprite';
+import '../styles/App.css';
 
 interface Props {
   borderRef: any;
@@ -104,10 +104,10 @@ function Player({ borderRef, socket }: Props) {
   };
 
   const checkPunchCollision = () => {
-    console.log("a");
+    console.log('a');
     const punchHitBox = punchDiv?.getBoundingClientRect();
     if (punchHitBox) {
-      console.log("b");
+      console.log('b');
       const {
         bottom: pBottom,
         top: pTop,
@@ -115,10 +115,10 @@ function Player({ borderRef, socket }: Props) {
         right: pRight,
       } = punchHitBox;
       if (pBottom && pTop && pLeft && pRight) {
-        console.log("c");
+        console.log('c');
         const opponentHitBox = getOpponentRefInfo();
         if (opponentHitBox) {
-          console.log("d");
+          console.log('d');
           const {
             bottom: oBottom,
             top: oTop,

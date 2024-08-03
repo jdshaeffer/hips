@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useState } from 'react';
 import PunchLine from './PunchLine';
-import './App.css';
+import '../styles/App.css';
 
 interface Props {
   punchRef: React.RefObject<HTMLDivElement>;
@@ -12,14 +12,12 @@ interface Props {
 }
 
 function Sprite({ punchRef, x, y, dir, punching, color }: Props, ref: any) {
-
   const [punchDir, setPunchDir] = useState('');
-  
+
   useEffect(() => {
-    if (dir !== '')
-        setPunchDir(dir);
-  }, [dir])
-  
+    if (dir !== '') setPunchDir(dir);
+  }, [dir]);
+
   return (
     <>
       <div
@@ -36,7 +34,13 @@ function Sprite({ punchRef, x, y, dir, punching, color }: Props, ref: any) {
         }}
       />
       {punching && (
-        <PunchLine punchRef={punchRef} punchDirection={punchDir} posX={x} posY={y} color={color} />
+        <PunchLine
+          punchRef={punchRef}
+          punchDirection={punchDir}
+          posX={x}
+          posY={y}
+          color={color}
+        />
       )}
     </>
   );

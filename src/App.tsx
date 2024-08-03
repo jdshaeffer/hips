@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
-import Player from './Player';
-import RemotePlayer from './RemotePlayer';
-import './App.css';
+import Player from './components/Player';
+import RemotePlayer from './components/RemotePlayer';
+import './styles/App.css';
 import { Socket, io } from 'socket.io-client';
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
@@ -60,20 +60,11 @@ function App() {
   return (
     <>
       <div ref={borderRef} className='center-box'>
-        <Player
-          borderRef={borderRef}
-          socket={socket}
-        />
+        <Player borderRef={borderRef} socket={socket} />
         {clients
           ?.filter((id) => socket !== undefined && id !== socket.id)
           .map((id: string) => {
-            return (
-              <RemotePlayer
-                key={id}
-                socket={socket}
-                clientId={id}
-              />
-            );
+            return <RemotePlayer key={id} socket={socket} clientId={id} />;
           })}
       </div>
       <div
