@@ -14,6 +14,8 @@ interface Props {
 // function Player(isLocal = true, socketId = "") {
 function Player({ socket, clientId }: Props) {
   
+  const punchRef = useRef<HTMLDivElement>(null);
+
   const [punching, setPunching] = useState(false);
   const [x, setX] = useState(135);
   const [y, setY] = useState(135);
@@ -41,9 +43,7 @@ function Player({ socket, clientId }: Props) {
         }
       });
       socket.on(`punchUpdate${clientId}`, (isPunching: boolean) => {
-        if (punching !== isPunching) {
-          setPunching(true);
-        }
+        setPunching(isPunching);
       });
 
       // request initial data for player
@@ -54,6 +54,7 @@ function Player({ socket, clientId }: Props) {
     <>
       <Sprite
         // id='player'
+        punchRef={punchRef}
         ref={playerRef}
         x={x}
         y={y}

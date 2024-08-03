@@ -3,14 +3,15 @@ import PunchLine from './PunchLine';
 import './App.css';
 
 interface Props {
-  x: number,
-  y: number,
-  dir: string,
-  punching: boolean,
-  color: string,
+  punchRef: React.RefObject<HTMLDivElement>;
+  x: number;
+  y: number;
+  dir: string;
+  punching: boolean;
+  color: string;
 }
 
-function Sprite({ x, y, dir, punching, color }: Props, ref: any) {
+function Sprite({ punchRef, x, y, dir, punching, color }: Props, ref: any) {
 
   const [punchDir, setPunchDir] = useState('');
   
@@ -35,7 +36,7 @@ function Sprite({ x, y, dir, punching, color }: Props, ref: any) {
         }}
       />
       {punching && (
-        <PunchLine punchDirection={punchDir} posX={x} posY={y} color={color} />
+        <PunchLine punchRef={punchRef} punchDirection={punchDir} posX={x} posY={y} color={color} />
       )}
     </>
   );
