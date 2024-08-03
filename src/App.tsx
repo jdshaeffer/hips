@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
 import Player from './Player';
+import RemotePlayer from './RemotePlayer';
 import './App.css';
 import { Socket, io } from 'socket.io-client';
 
@@ -14,10 +15,10 @@ function App() {
 
   const onSocketConnect = () => {
     if (socketError || !connected) {
-      console.log("Socket reconnected!");
-      socket.emit("requestCacheDump");
+      console.log('Socket reconnected!');
+      socket.emit('requestCacheDump');
     }
-    
+
     setSocketError(false);
     setConnected(true);
   };
@@ -62,18 +63,14 @@ function App() {
         <Player
           borderRef={borderRef}
           socket={socket}
-          isRemote={false}
-          clientId={''}
         />
         {clients
           ?.filter((id) => socket !== undefined && id !== socket.id)
           .map((id: string) => {
             return (
-              <Player
+              <RemotePlayer
                 key={id}
-                borderRef={borderRef}
                 socket={socket}
-                isRemote={true}
                 clientId={id}
               />
             );
@@ -101,10 +98,8 @@ function App() {
             );
         })}
       </div>
-      <div
-        className='network-status'
-      >
-        {connected ? '' : (socketError ? '🟥' : '🟧')}
+      <div className='network-status'>
+        {connected ? '' : socketError ? '🟥' : '🟧'}
       </div>
     </>
   );

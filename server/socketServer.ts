@@ -3,22 +3,6 @@ import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { PlayerData } from '../models/PlayerData';
 import { PosData } from '../models/PosData';
 
-const getClientIds = (): string[] => {
-  return Array.from(io.of('/').sockets.keys());
-}
-
-const updateClientIds = () => {
-  const clientIds = getClientIds();
-  const playerIds = Object.keys(playerData);
-
-  const rm = playerIds.forEach((id) => {
-    if (!clientIds.includes(id))
-      delete playerData[id]
-  })
-
-  io.emit('clientUpdate', getClientIds());
-}
-
 interface SocketData
   extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap> {
   data: any;
@@ -38,6 +22,24 @@ const socketConfig =
 
 const io = new Server(socketConfig);
 const playerData: { [key: string]: PlayerData } = {};
+
+const getClientIds = (): string[] => {
+  return Array.from(io.of('/').sockets.keys());
+}
+
+const updateClientIds = () => {
+  // io.timeout(1000).emit("areYouThere")
+  const clientIds = getClientIds();
+  const playerIds = Object.keys(playerData);
+  console.log('Update client ids: ' + getClientIds());
+
+  const rm = playerIds.forEach((id) => {
+    if (!clientIds.includes(id))
+      delete playerData[id]
+  })
+
+  io.emit('clientUpdate', getClientIds());
+}
 
 io.on('connection', (socket: SocketData) => {
   playerData[socket.id] = {
@@ -87,6 +89,8 @@ io.on('connection', (socket: SocketData) => {
 
   socket.on('disconnect', () => {
     delete playerData[socket.id];
+    console.log(`Client ${socket.id} disconnected.`)
+    updateClientIds();
   });
 });
 

@@ -1,27 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { DefaultEventsMap } from '@socket.io/component-emitter';
-import PunchLine from './PunchLine';
 import getMoveDirection from './getMoveDirection';
 import './App.css';
-import { PlayerData } from '../models/PlayerData';
-import { PosData } from '../models/PosData';
+import Sprite from './Sprite';
 
 interface Props {
   borderRef: any;
   socket: Socket<DefaultEventsMap, DefaultEventsMap>;
-  isRemote: boolean; // only needed when this player component belongs to a remote client
-  clientId: string; // only needed when this player component belongs to a remote client
 }
 
 // function Player(isLocal = true, socketId = "") {
-function Player({ borderRef, socket, isRemote, clientId }: Props) {
+function Player({ borderRef, socket }: Props) {
   const [punching, setPunching] = useState(false);
   const [punchDir, setPunchDir] = useState('');
 
   const [x, setX] = useState(135);
   const [y, setY] = useState(135);
-  const [name, setName] = useState('Bob');
   const [color, setColor] = useState('#ffffff');
   const [direction, setDirection] = useState('');
 
@@ -31,8 +26,6 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
   // other state
   const [moving, setMoving] = useState(false);
   const [lastDirection, setLastDirection] = useState('n');
-
-  // ================= LOCAL ONLY ====================
 
   const directionMap: { [key: string]: string } = {
     ArrowUp: 'n',
@@ -144,7 +137,7 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
   };
 
   const emitPlayerUpdate = () => {
-    if (socket !== undefined && !isRemote) {
+    if (socket !== undefined) {
       socket.emit(`playerUpdate${socket.id}`, {
         pos: {
           x,
@@ -152,18 +145,18 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
           dir: direction,
         },
         color: color,
-        name: name,
+        name: 'bob',
       });
     }
   };
 
   const emitPunchingUpdate = () => {
-    if (socket !== undefined && !isRemote)
+    if (socket !== undefined)
       socket.emit(`punchUpdate${socket.id}`, punching);
   };
 
   const emitPositionUpdate = () => {
-    if (socket !== undefined && !isRemote)
+    if (socket !== undefined)
       socket.emit(`positionUpdate${socket.id}`, { x, y, dir: direction });
   };
 
@@ -180,61 +173,30 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
   };
 
   useEffect(() => {
-    if (!isRemote) emitPlayerUpdate();
-  }, [color, name]);
+    emitPlayerUpdate();
+  }, [color]);
 
   useEffect(() => {
-    if (!isRemote) emitPunchingUpdate();
-    else if (punching) punch();
+    emitPunchingUpdate();
+    // else if (punching) punch();
   }, [punching]);
 
   useEffect(() => {
-    if (!isRemote) emitPositionUpdate();
+    emitPositionUpdate();
   }, [x, y, direction]);
 
   useEffect(() => {
-    if (!isRemote) {
-      const color = randColor();
-      setColor(color);
-    } else {
-      socket.on(`playerUpdate${clientId}`, (playerChanges: PlayerData) => {
-        if (playerChanges.pos.x !== x) setX(playerChanges.pos.x);
-        if (playerChanges.pos.y !== y) setY(playerChanges.pos.y);
-        if (playerChanges.pos.dir !== direction)
-          setDirection(playerChanges.pos.dir);
-        if (playerChanges.color !== color) {
-          setColor(playerChanges.color);
-        }
-      });
-      socket.on(`positionUpdate${clientId}`, (posChanges: PosData) => {
-        if (posChanges.x !== x) setX(posChanges.x);
-        if (posChanges.y !== y) setY(posChanges.y);
-        if (posChanges.dir !== direction) {
-          setDirection(posChanges.dir);
-          setLastDirection(posChanges.dir);
-        }
-      });
-      socket.on(`punchUpdate${clientId}`, (isPunching: boolean) => {
-        if (punching !== isPunching) {
-          setPunching(true);
-        }
-      });
-
-      // request initial data for player
-      socket.emit(`requestCacheDump${socket.id}`);
-    }
+    const color = randColor();
+    setColor(color);
   }, [socket]);
 
-  // Initialize
   useEffect(() => {
-    if (!isRemote) {
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('keyup', handleKeyUp);
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('keyup', handleKeyUp);
-      };
-    }
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [handleKeyDown, handleKeyUp]);
 
   useEffect(() => {
@@ -243,21 +205,15 @@ function Player({ borderRef, socket, isRemote, clientId }: Props) {
 
   return (
     <>
-      <div
-        id='player'
+      <Sprite
+        // id='player'
         ref={playerRef}
-        className='player'
-        style={{
-          top: y,
-          left: x,
-          zIndex: y,
-          padding: '10px',
-          border: `2px solid ${color}`,
-        }}
+        x={x}
+        y={y}
+        dir={direction}
+        punching={punching}
+        color={color}
       />
-      {punching && (
-        <PunchLine punchDirection={punchDir} posX={x} posY={y} color={color} />
-      )}
     </>
   );
 }
