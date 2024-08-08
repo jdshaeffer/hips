@@ -59,8 +59,13 @@ io.on('connection', (socket: SocketData) => {
 
   updateClientIds();
 
+  socket.on(`requestPlayerUpdate${socket.id}`, () => {
+    socket.emit(`playerUpdate${socket.id}`, playerData[socket.id]);
+  });
+
   // Purpose: request getting the entirety of the player values
   socket.on(`requestCacheDump${socket.id}`, () => {
+    updateClientIds();
     Object.keys(playerData).forEach((pId: string) =>
       socket.emit(`playerUpdate${pId}`, playerData[pId])
     );
@@ -84,7 +89,7 @@ io.on('connection', (socket: SocketData) => {
     socket.broadcast.emit(`positionUpdate${socket.id}`, pos);
   });
 
-  socket.on(`punchUpdate${socket.id}`, ({ isPunching }) => {
+  socket.on(`punchUpdate${socket.id}`, (isPunching) => {
     socket.broadcast.emit(`punchUpdate${socket.id}`, isPunching);
   });
 

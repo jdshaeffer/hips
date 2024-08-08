@@ -8,15 +8,22 @@ import '../styles/App.css';
 
 interface Props {
   socket: Socket<DefaultEventsMap, DefaultEventsMap>;
-  color: string;
   borderRef: React.RefObject<HTMLDivElement>;
 }
 
-function Player({ borderRef, socket, color }: Props) {
+const randColor = () => {
+  return (
+    '#' +
+    ((Math.random() * 0x888888 + 0x888888) << 0).toString(16).padStart(6, '0')
+  );
+};
+
+function Player({ socket, borderRef }: Props) {
   const [isPunching, setIsPunching] = useState(false);
   const [x, setX] = useState(135);
   const [y, setY] = useState(135);
   const [direction, setDirection] = useState('');
+  const [color, setColor] = useState(randColor());
 
   // html refs and hitboxes
   const playerRef = useRef<HTMLDivElement>(null);
@@ -171,19 +178,15 @@ function Player({ borderRef, socket, color }: Props) {
 
   // emit punching update when isPunching changes
   useEffect(() => {
-    if (socket) {
-      socket.emit(`punchUpdate${socket.id}`, { isPunching });
-    }
+    socket?.emit(`punchUpdate${socket.id}`, isPunching);
   }, [isPunching]);
 
   // emit position update when x/y/direction changes
   useEffect(() => {
-    if (socket) {
-      socket.emit(`positionUpdate${socket.id}`, {
-        pos: { x, y, dir: direction },
-        hitBox: playerHitBox,
-      });
-    }
+    socket?.emit(`positionUpdate${socket.id}`, {
+      pos: { x, y, dir: direction },
+      hitBox: playerHitBox,
+    });
   }, [x, y, direction]);
 
   // set initial server values after client mounts
@@ -198,6 +201,15 @@ function Player({ borderRef, socket, color }: Props) {
         color: color,
         name: 'bob',
         hitBox: playerHitBox,
+      });
+      socket.emit(`playerUpdate${socket.id}`, {
+        pos: {
+          x,
+          y,
+          dir: direction,
+        },
+        color: color,
+        name: 'bob',
       });
     }
   }, [socket]);
