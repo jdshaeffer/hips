@@ -9,16 +9,15 @@ import '../styles/App.css';
 interface Props {
   socket: Socket<DefaultEventsMap, DefaultEventsMap>;
   clientId: string;
+  color: string;
 }
 
-// function Player(isLocal = true, socketId = "") {
-function Player({ socket, clientId }: Props) {
+function RemotePlayer({ socket, clientId, color }: Props) {
   const punchRef = useRef<HTMLDivElement>(null);
 
-  const [punching, setPunching] = useState(false);
+  const [isPunching, setIsPunching] = useState(false);
   const [x, setX] = useState(135);
   const [y, setY] = useState(135);
-  const [color, setColor] = useState('#ffffff');
   const [direction, setDirection] = useState('');
 
   // html ref
@@ -30,9 +29,9 @@ function Player({ socket, clientId }: Props) {
       if (playerChanges.pos.y !== y) setY(playerChanges.pos.y);
       if (playerChanges.pos.dir !== direction)
         setDirection(playerChanges.pos.dir);
-      if (playerChanges.color !== color) {
-        setColor(playerChanges.color);
-      }
+      // if (playerChanges.color !== color) {
+      //   setColor(playerChanges.color);
+      // }
     });
     socket.on(`positionUpdate${clientId}`, (posChanges: PosData) => {
       if (posChanges.x !== x) setX(posChanges.x);
@@ -42,27 +41,23 @@ function Player({ socket, clientId }: Props) {
       }
     });
     socket.on(`punchUpdate${clientId}`, (isPunching: boolean) => {
-      setPunching(isPunching);
+      setIsPunching(isPunching);
     });
-
-    // request initial data for player
-    socket.emit(`requestCacheDump${socket.id}`);
   }, [socket]);
 
   return (
     <>
       <Sprite
-        // id='player'
         punchRef={punchRef}
         ref={playerRef}
         x={x}
         y={y}
         dir={direction}
-        punching={punching}
+        punching={isPunching}
         color={color}
       />
     </>
   );
 }
 
-export default Player;
+export default RemotePlayer;

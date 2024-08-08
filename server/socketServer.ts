@@ -1,11 +1,17 @@
 import { Server, Socket } from 'socket.io';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
+import { HitBox } from '../models/HitBox';
 import { PlayerData } from '../models/PlayerData';
 import { PosData } from '../models/PosData';
 
 interface SocketData
   extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap> {
   data: any;
+}
+
+interface PositionUpdate {
+  pos: PosData;
+  hitBox: HitBox;
 }
 
 const socketConfig =
@@ -28,12 +34,10 @@ const getClientIds = (): string[] => {
 };
 
 const updateClientIds = () => {
-  // io.timeout(1000).emit("areYouThere")
   const clientIds = getClientIds();
   const playerIds = Object.keys(playerData);
-  console.log('Update client ids: ' + getClientIds());
 
-  const rm = playerIds.forEach((id) => {
+  playerIds.forEach((id) => {
     if (!clientIds.includes(id)) delete playerData[id];
   });
 
@@ -41,6 +45,7 @@ const updateClientIds = () => {
 };
 
 io.on('connection', (socket: SocketData) => {
+  console.log(`Client ${socket.id} connected.`);
   playerData[socket.id] = {
     pos: {
       x: 135,
@@ -49,47 +54,74 @@ io.on('connection', (socket: SocketData) => {
     },
     name: 'bob',
     color: '#FFFFFF',
+    hitBox: { top: 0, left: 0, bottom: 0, right: 0 },
   };
 
   updateClientIds();
 
-  // Purpose: update newly connected clients with present values
-  socket.on(`requestPlayerUpdate${socket.id}`, () => {
-    socket.emit(`playerUpdate${socket.id}`, playerData[socket.id]);
-  });
-
   // Purpose: request getting the entirety of the player values
   socket.on(`requestCacheDump${socket.id}`, () => {
-    updateClientIds();
     Object.keys(playerData).forEach((pId: string) =>
       socket.emit(`playerUpdate${pId}`, playerData[pId])
     );
-    // Object.values(playerData).forEach((pd: PlayerData) => socket.emit(`playerUpdate${pd.id}`, pd));
+  });
+
+  socket.on('initializePlayerData', (pd) => {
+    playerData[socket.id] = pd;
   });
 
   // Purpose: update all clients with entire player values
   socket.on(`playerUpdate${socket.id}`, (pd: PlayerData) => {
-    console.log(`color: ${pd.color}`);
-    if (playerData[socket.id].color !== pd.color)
-      console.log(
-        `colorUpdate from ${playerData[socket.id].color} to ${
-          pd.color
-        } on client ${socket.id}`
-      );
-
+    console.log(pd);
     playerData[socket.id] = pd;
     socket.broadcast.emit(`playerUpdate${socket.id}`, pd);
   });
 
   // Purpose: update all clients with only position values
-  socket.on(`positionUpdate${socket.id}`, (pos: PosData) => {
+  socket.on(`positionUpdate${socket.id}`, ({ pos, hitBox }: PositionUpdate) => {
     playerData[socket.id].pos = pos;
+    playerData[socket.id].hitBox = hitBox;
     socket.broadcast.emit(`positionUpdate${socket.id}`, pos);
   });
 
-  // Purpose: update all clients with only punching value
-  socket.on(`punchUpdate${socket.id}`, (punching: false) => {
-    socket.broadcast.emit(`punchUpdate${socket.id}`, punching);
+  socket.on(`punchUpdate${socket.id}`, ({ isPunching }) => {
+    socket.broadcast.emit(`punchUpdate${socket.id}`, isPunching);
+  });
+
+  // receive player punch data, return response of opponents hit
+  socket.on(`punchCollision${socket.id}`, (punchHitBox: HitBox, callback) => {
+    console.log('\npunching from', socket.id, punchHitBox);
+    const opponentIds = Object.keys(playerData).filter((id) => id != socket.id);
+    const {
+      bottom: pBottom,
+      top: pTop,
+      left: pLeft,
+      right: pRight,
+    } = punchHitBox;
+
+    for (const id of opponentIds) {
+      const opponentHitBox = playerData[id].hitBox;
+      console.log('opponent:');
+      console.log(opponentHitBox);
+      const {
+        bottom: oBottom,
+        top: oTop,
+        left: oLeft,
+        right: oRight,
+      } = opponentHitBox;
+      if (
+        (pLeft >= oLeft || pRight >= oLeft) &&
+        (pLeft <= oRight || pRight <= oRight) &&
+        (pBottom <= oBottom || pTop <= oBottom) &&
+        (pBottom >= oTop || pTop >= oTop)
+      ) {
+        console.log('PUNCH HIT');
+      }
+    }
+
+    callback({
+      status: 'ok',
+    });
   });
 
   socket.on('disconnect', () => {

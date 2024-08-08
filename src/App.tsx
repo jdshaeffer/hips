@@ -13,10 +13,16 @@ function App() {
   const [socketError, setSocketError] = useState<boolean>(false);
   const [connected, setConnected] = useState<boolean>(true);
 
+  const randColor = () => {
+    return (
+      '#' +
+      ((Math.random() * 0x888888 + 0x888888) << 0).toString(16).padStart(6, '0')
+    );
+  };
+
   const onSocketConnect = () => {
     if (socketError || !connected) {
       console.log('Socket reconnected!');
-      socket.emit('requestCacheDump');
     }
 
     setSocketError(false);
@@ -53,18 +59,24 @@ function App() {
     // data updating
     socket.on('clientUpdate', (clientIds: string[]) => {
       setClients(clientIds);
-      socket.emit('requestCacheDump');
     });
   }, []);
 
   return (
     <>
       <div ref={borderRef} className='center-box'>
-        <Player borderRef={borderRef} socket={socket} />
+        <Player socket={socket} color={randColor()} borderRef={borderRef} />
         {clients
           ?.filter((id) => socket !== undefined && id !== socket.id)
           .map((id: string) => {
-            return <RemotePlayer key={id} socket={socket} clientId={id} />;
+            return (
+              <RemotePlayer
+                key={id}
+                socket={socket}
+                clientId={id}
+                color={randColor()}
+              />
+            );
           })}
       </div>
       <div

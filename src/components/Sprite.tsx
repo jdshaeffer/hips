@@ -12,7 +12,7 @@ interface Props {
 }
 
 function Sprite({ punchRef, x, y, dir, punching, color }: Props, ref: any) {
-  const [punchDir, setPunchDir] = useState('');
+  const [punchDir, setPunchDir] = useState('n');
 
   useEffect(() => {
     if (dir !== '') setPunchDir(dir);
@@ -23,7 +23,6 @@ function Sprite({ punchRef, x, y, dir, punching, color }: Props, ref: any) {
       <div
         id='sprite'
         ref={ref}
-        className='sprite'
         style={{
           position: 'absolute',
           top: y,
