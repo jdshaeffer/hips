@@ -99,7 +99,6 @@ function Player({ socket, borderRef }: Props) {
   const checkBorderCollision = () => {
     let borderDetected = new Set<string>();
     if (playerHitBox) {
-      console.log('player', playerHitBox);
       const hasCollided = (side: string) =>
         0 < playerHitBox[side] && playerHitBox[side] < 5;
 
@@ -189,19 +188,9 @@ function Player({ socket, borderRef }: Props) {
     });
   }, [x, y, direction]);
 
-  // set initial server values after client mounts
+  // set initial server values after client mounts, emit to remote players
   useEffect(() => {
     if (socket) {
-      socket.emit('initializePlayerData', {
-        pos: {
-          x,
-          y,
-          dir: direction,
-        },
-        color: color,
-        name: 'bob',
-        hitBox: playerHitBox,
-      });
       socket.emit(`playerUpdate${socket.id}`, {
         pos: {
           x,
@@ -210,6 +199,7 @@ function Player({ socket, borderRef }: Props) {
         },
         color: color,
         name: 'bob',
+        hitBox: playerHitBox,
       });
     }
   }, [socket]);
@@ -228,7 +218,6 @@ function Player({ socket, borderRef }: Props) {
     if (isPunching) {
       const punchDiv = punchRef.current?.getBoundingClientRect();
       if (punchDiv) {
-        console.log(borderHitBox);
         const punchHitBox = {
           top: punchDiv.top - borderHitBox.top,
           bottom: borderHitBox.bottom - punchDiv.bottom,
@@ -238,13 +227,13 @@ function Player({ socket, borderRef }: Props) {
 
         // send the player's punchHitBox to the server, check there if it hits any opponent's hitboxes
         if (socket) {
-          socket.emit(
-            `punchCollision${socket.id}`,
-            punchHitBox,
-            (response: any) => {
-              console.log(response.status);
+          socket.emit('punchCollision', punchHitBox, (res: any) => {
+            // TODO res doesn't fully work yet with more than 1 opponent
+            if (res.punchCollision) {
+              console.log(`${res.puncher} just clocked ${res.opponent}!`);
+              // TODO: will need to emit this to everyone
             }
-          );
+          });
         }
       }
     }

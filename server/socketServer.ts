@@ -71,13 +71,8 @@ io.on('connection', (socket: SocketData) => {
     );
   });
 
-  socket.on('initializePlayerData', (pd) => {
-    playerData[socket.id] = pd;
-  });
-
   // Purpose: update all clients with entire player values
   socket.on(`playerUpdate${socket.id}`, (pd: PlayerData) => {
-    console.log(pd);
     playerData[socket.id] = pd;
     socket.broadcast.emit(`playerUpdate${socket.id}`, pd);
   });
@@ -94,8 +89,7 @@ io.on('connection', (socket: SocketData) => {
   });
 
   // receive player punch data, return response of opponents hit
-  socket.on(`punchCollision${socket.id}`, (punchHitBox: HitBox, callback) => {
-    console.log('\npunching from', socket.id, punchHitBox);
+  socket.on('punchCollision', (punchHitBox: HitBox, callback) => {
     const opponentIds = Object.keys(playerData).filter((id) => id != socket.id);
     const {
       bottom: pBottom,
@@ -103,30 +97,38 @@ io.on('connection', (socket: SocketData) => {
       left: pLeft,
       right: pRight,
     } = punchHitBox;
-
     for (const id of opponentIds) {
       const opponentHitBox = playerData[id].hitBox;
-      console.log('opponent:');
-      console.log(opponentHitBox);
       const {
         bottom: oBottom,
         top: oTop,
         left: oLeft,
         right: oRight,
       } = opponentHitBox;
+      let xPunch = false;
+      let yPunch = false;
+      if (pBottom - oBottom <= 24 && pTop - oTop <= 24) {
+        xPunch = true;
+      }
       if (
-        (pLeft >= oLeft || pRight >= oLeft) &&
-        (pLeft <= oRight || pRight <= oRight) &&
-        (pBottom <= oBottom || pTop <= oBottom) &&
-        (pBottom >= oTop || pTop >= oTop)
+        (pLeft - oLeft < 22 && pLeft - oLeft > -2) ||
+        (pRight - oRight > 2 && pRight - oRight < 22)
       ) {
-        console.log('PUNCH HIT');
+        yPunch = true;
+      }
+      if (xPunch && yPunch) {
+        callback({
+          punchCollision: true,
+          puncher: socket.id,
+          opponent: id,
+        });
+        console.log('*************PUNCH************');
+      } else {
+        callback({
+          punchCollision: false,
+        });
       }
     }
-
-    callback({
-      status: 'ok',
-    });
   });
 
   socket.on('disconnect', () => {
