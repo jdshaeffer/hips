@@ -18,7 +18,6 @@ function App() {
       process.env.NODE_ENV === 'production'
         ? io('https://nycmud.com', {
             path: '/socket.io',
-            transports: ['websocket'],
           })
         : io('http://localhost:3001');
 
