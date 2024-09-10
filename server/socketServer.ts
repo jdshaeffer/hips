@@ -19,14 +19,14 @@ const socketConfig =
     ? {
         path: '/socket.io',
         cors: {
-          origin: ['https://jdshaeffer.github.io'],
+          origin: 'https://jdshaeffer.github.io',
+          allowedHeaders: ['Access-Control-Allow-Origin'],
           methods: ['GET', 'POST'],
         },
       }
     : {
         cors: {
           origin: ['http://localhost:3000', 'https://jdshaeffer.github.io'],
-          methods: ['GET', 'POST'],
         },
       };
 
@@ -145,4 +145,4 @@ io.on('connection', (socket: SocketData) => {
 io.on('disconnect', (socket: any) => updateClientIds());
 io.on('reconnect', (socket: any) => updateClientIds());
 
-io.listen(3001);
+io.listen(5000);

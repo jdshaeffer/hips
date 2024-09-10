@@ -19,7 +19,7 @@ function App() {
         ? io('https://nycmud.com', {
             path: '/socket.io',
           })
-        : io('http://localhost:3001');
+        : io('http://localhost:5000');
 
     if (socket) {
       const onSocketConnect = () => {
