@@ -1,4 +1,6 @@
-interface Props {
+import '../styles/App.css';
+
+interface PunchLineProps {
   punchRef: React.RefObject<HTMLDivElement>;
   punchDirection: string;
   posX: number;
@@ -6,7 +8,13 @@ interface Props {
   color: string;
 }
 
-function PunchLine({ punchRef, punchDirection, posX, posY, color }: Props) {
+function PunchLine({
+  punchRef,
+  punchDirection,
+  posX,
+  posY,
+  color,
+}: PunchLineProps) {
   const punchDirectionMap = {
     n: { top: posY - 10, left: posX },
     e: { top: posY + 11, left: posX + 21, transform: 'rotate(90deg)' },
