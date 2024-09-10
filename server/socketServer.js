@@ -1,51 +1,102 @@
-'use strict';
-Object.defineProperty(exports, '__esModule', { value: true });
-const socket_io_1 = require('socket.io');
-const socketConfig =
-  process.env.NODE_ENV === 'prod'
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const socket_io_1 = require("socket.io");
+const socketConfig = process.env.NODE_ENV === 'prod'
     ? {
         path: '/socket.io',
-      }
+    }
     : {
         cors: {
-          origin: ['http://localhost:3000', 'https://jdshaeffer.github.io'],
-          methods: ['GET', 'POST'],
+            origin: ['http://localhost:3000', 'https://jdshaeffer.github.io'],
+            methods: ['GET', 'POST'],
         },
-      };
+    };
 const io = new socket_io_1.Server(socketConfig);
-let playerCount = 0;
-// NOTE: the Map object holds key-value pairs
-// and remembers the original insertion order of the keys
-const socketToPlayerId = new Map();
+const playerData = {};
+const getClientIds = () => {
+    return Array.from(io.of('/').sockets.keys());
+};
+const updateClientIds = () => {
+    const clientIds = getClientIds();
+    const playerIds = Object.keys(playerData);
+    playerIds.forEach((id) => {
+        if (!clientIds.includes(id))
+            delete playerData[id];
+    });
+    io.emit('clientUpdate', getClientIds());
+};
 io.on('connection', (socket) => {
-  console.log('socket server connected to client');
-  playerCount += 1;
-  io.emit('playerCountUpdate', playerCount);
-  if (playerCount < 3) {
-    socketToPlayerId.set(playerCount, socket.id);
-    // emit only back to sender to issue playerId
-    socket.emit('assignPlayerId', playerCount);
-    socket.on('p1Moving', (pos) => {
-      // to all clients except sender
-      socket.broadcast.emit('p1Moving', pos);
+    console.log(`Client ${socket.id} connected.`);
+    playerData[socket.id] = {
+        pos: {
+            x: 135,
+            y: 135,
+            dir: '',
+        },
+        name: 'bob',
+        color: '#FFFFFF',
+        hitBox: { top: 0, left: 0, bottom: 0, right: 0 },
+    };
+    updateClientIds();
+    socket.on(`requestPlayerUpdate${socket.id}`, () => {
+        socket.emit(`playerUpdate${socket.id}`, playerData[socket.id]);
     });
-    socket.on('p2Moving', (pos) => {
-      socket.broadcast.emit('p2Moving', pos);
+    // Purpose: request getting the entirety of the player values
+    socket.on(`requestCacheDump${socket.id}`, () => {
+        updateClientIds();
+        Object.keys(playerData).forEach((pId) => socket.emit(`playerUpdate${pId}`, playerData[pId]));
     });
-    socket.on('p1Punching', (isPunching, punchDirection) => {
-      // to all connected clients
-      io.emit('p1Punching', isPunching, punchDirection);
+    // Purpose: update all clients with entire player values
+    socket.on(`playerUpdate${socket.id}`, (pd) => {
+        playerData[socket.id] = pd;
+        socket.broadcast.emit(`playerUpdate${socket.id}`, pd);
     });
-    socket.on('p2Punching', (isPunching, punchDirection) => {
-      io.emit('p2Punching', isPunching, punchDirection);
+    // Purpose: update all clients with only position values
+    socket.on(`positionUpdate${socket.id}`, ({ pos, hitBox }) => {
+        playerData[socket.id].pos = pos;
+        playerData[socket.id].hitBox = hitBox;
+        socket.broadcast.emit(`positionUpdate${socket.id}`, pos);
     });
-  }
-  socket.on('disconnect', () => {
-    playerCount -= 1;
-    socketToPlayerId.set(playerCount, socket.id);
-    // need to emit to the remaining player that they're now player1 when player1 disconnects
-    socket.broadcast.emit('assignPlayerId', playerCount);
-    io.emit('playerCountUpdate', playerCount);
-  });
+    socket.on(`punchUpdate${socket.id}`, (isPunching) => {
+        socket.broadcast.emit(`punchUpdate${socket.id}`, isPunching);
+    });
+    // receive player punch data, return response of opponents hit
+    socket.on('punchCollision', (punchHitBox, callback) => {
+        const opponentIds = Object.keys(playerData).filter((id) => id != socket.id);
+        const { bottom: pBottom, top: pTop, left: pLeft, right: pRight, } = punchHitBox;
+        for (const id of opponentIds) {
+            const opponentHitBox = playerData[id].hitBox;
+            const { bottom: oBottom, top: oTop, left: oLeft, right: oRight, } = opponentHitBox;
+            let xPunch = false;
+            let yPunch = false;
+            if (pBottom - oBottom <= 24 && pTop - oTop <= 24) {
+                xPunch = true;
+            }
+            if ((pLeft - oLeft < 22 && pLeft - oLeft > -2) ||
+                (pRight - oRight > 2 && pRight - oRight < 22)) {
+                yPunch = true;
+            }
+            if (xPunch && yPunch) {
+                callback({
+                    punchCollision: true,
+                    puncher: socket.id,
+                    opponent: id,
+                });
+                console.log('*************PUNCH************');
+            }
+            else {
+                callback({
+                    punchCollision: false,
+                });
+            }
+        }
+    });
+    socket.on('disconnect', () => {
+        delete playerData[socket.id];
+        console.log(`Client ${socket.id} disconnected.`);
+        updateClientIds();
+    });
 });
-io.listen(5000);
+io.on('disconnect', (socket) => updateClientIds());
+io.on('reconnect', (socket) => updateClientIds());
+io.listen(3001);

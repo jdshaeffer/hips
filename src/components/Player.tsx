@@ -23,7 +23,7 @@ function Player({ socket, borderRef }: Props) {
   const [x, setX] = useState(135);
   const [y, setY] = useState(135);
   const [direction, setDirection] = useState('');
-  const [color, setColor] = useState(randColor());
+  const [color] = useState(randColor());
 
   // html refs and hitboxes
   const playerRef = useRef<HTMLDivElement>(null);
@@ -43,7 +43,6 @@ function Player({ socket, borderRef }: Props) {
 
   // other state
   const [isMoving, setIsMoving] = useState(false);
-  const [lastDirection, setLastDirection] = useState('n');
 
   const directionMap: { [key: string]: string } = {
     ArrowUp: 'n',
@@ -70,31 +69,6 @@ function Player({ socket, borderRef }: Props) {
     ((key === 'ArrowDown' || key === 's') && !dir.includes('s')) ||
     ((key === 'ArrowRight' || key === 'd') && !dir.includes('e')) ||
     ((key === 'ArrowLeft' || key === 'a') && !dir.includes('w'));
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (isValidDirection(e.key, direction)) {
-      setIsMoving(true);
-      setDirection(direction + directionMap[e.key]);
-    }
-
-    if (e.key === ' ' && !e.repeat) {
-      setIsPunching(true);
-      setTimeout(() => setIsPunching(false), 150);
-    }
-  };
-
-  const handleKeyUp = (e: KeyboardEvent) => {
-    if (e.key === ' ') return;
-    setLastDirection(direction);
-    const mappedDirection = directionMap[e.key];
-    if (mappedDirection) {
-      const i = direction.indexOf(mappedDirection);
-      setDirection(direction.slice(0, i) + direction.slice(i + 1));
-      if (direction.length === 0) {
-        setIsMoving(false);
-      }
-    }
-  };
 
   const checkBorderCollision = () => {
     let borderDetected = new Set<string>();
@@ -173,12 +147,12 @@ function Player({ socket, borderRef }: Props) {
         }
       }
     }
-  }, []);
+  }, [borderRef]);
 
   // emit punching update when isPunching changes
   useEffect(() => {
     socket?.emit(`punchUpdate${socket.id}`, isPunching);
-  }, [isPunching]);
+  }, [isPunching, socket]);
 
   // emit position update when x/y/direction changes
   useEffect(() => {
@@ -186,7 +160,7 @@ function Player({ socket, borderRef }: Props) {
       pos: { x, y, dir: direction },
       hitBox: playerHitBox,
     });
-  }, [x, y, direction]);
+  }, [x, y, direction, playerHitBox, socket]);
 
   // set initial server values after client mounts, emit to remote players
   useEffect(() => {
@@ -202,16 +176,40 @@ function Player({ socket, borderRef }: Props) {
         hitBox: playerHitBox,
       });
     }
-  }, [socket]);
+  }, [socket, color, direction, playerHitBox, x, y]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isValidDirection(e.key, direction)) {
+        setIsMoving(true);
+        setDirection(direction + directionMap[e.key]);
+      }
+
+      if (e.key === ' ' && !e.repeat) {
+        setIsPunching(true);
+        setTimeout(() => setIsPunching(false), 150);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ') return;
+      const mappedDirection = directionMap[e.key];
+      if (mappedDirection) {
+        const i = direction.indexOf(mappedDirection);
+        setDirection(direction.slice(0, i) + direction.slice(i + 1));
+        if (direction.length === 0) {
+          setIsMoving(false);
+        }
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleKeyDown, handleKeyUp]);
+  });
 
   useEffect(() => {
     if (isMoving) requestAnimationFrame(move);

@@ -13,25 +13,6 @@ function App() {
   const [socketError, setSocketError] = useState<boolean>(false);
   const [connected, setConnected] = useState<boolean>(true);
 
-  const onSocketConnect = () => {
-    if (socketError || !connected) {
-      console.log('Socket reconnected!');
-      socket.emit('requestCacheDump');
-    }
-
-    setSocketError(false);
-    setConnected(true);
-  };
-
-  const onSocketError = (err: any) => {
-    console.error('Error occured with socket.io', err);
-    setSocketError(true);
-  };
-
-  const onSocketDisconnect = () => {
-    setConnected(false);
-  };
-
   useEffect(() => {
     socket =
       process.env.NODE_ENV === 'production'
@@ -40,22 +21,43 @@ function App() {
           })
         : io('http://localhost:3001');
 
-    // status
-    socket.on('connect_error', onSocketError);
-    socket.on('reconnect_error', onSocketError);
-    socket.on('reconnect_failure', onSocketError);
-    socket.on('error', onSocketError);
+    if (socket) {
+      const onSocketConnect = () => {
+        if (socketError || !connected) {
+          console.log('Socket reconnected!');
+          socket.emit('requestCacheDump');
+        }
 
-    socket.on('connect', onSocketConnect);
-    socket.on('reconnect', onSocketConnect);
-    socket.on('disconnect', onSocketDisconnect);
+        setSocketError(false);
+        setConnected(true);
+      };
 
-    // data updating
-    socket.on('clientUpdate', (clientIds: string[]) => {
-      setClients(clientIds);
-      socket.emit('requestCacheDump');
-    });
-  }, []);
+      const onSocketError = (err: any) => {
+        console.error('Error occured with socket.io', err);
+        setSocketError(true);
+      };
+
+      const onSocketDisconnect = () => {
+        setConnected(false);
+      };
+
+      // status
+      socket.on('connect_error', onSocketError);
+      socket.on('reconnect_error', onSocketError);
+      socket.on('reconnect_failure', onSocketError);
+      socket.on('error', onSocketError);
+
+      socket.on('connect', onSocketConnect);
+      socket.on('reconnect', onSocketConnect);
+      socket.on('disconnect', onSocketDisconnect);
+
+      // data updating
+      socket.on('clientUpdate', (clientIds: string[]) => {
+        setClients(clientIds);
+        socket.emit('requestCacheDump');
+      });
+    }
+  }, [connected, socketError]);
 
   return (
     <>

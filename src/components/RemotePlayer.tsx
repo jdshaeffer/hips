@@ -46,7 +46,7 @@ function RemotePlayer({ socket, clientId }: Props) {
 
     // request initial data for player
     socket.emit(`requestCacheDump${socket.id}`);
-  }, [socket]);
+  }, [socket, clientId, color, direction, x, y]);
 
   return (
     <>
