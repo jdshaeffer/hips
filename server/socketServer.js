@@ -4,6 +4,10 @@ const socket_io_1 = require("socket.io");
 const socketConfig = process.env.NODE_ENV === 'prod'
     ? {
         path: '/socket.io',
+        cors: {
+            origin: ['https://jdshaeffer.github.io'],
+            methods: ['GET', 'POST'],
+        },
     }
     : {
         cors: {
