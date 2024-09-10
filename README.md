@@ -17,7 +17,7 @@ FE and BE for hips: an open-source, web-based party game inspired by the classic
 
 1. pushing FE will kick off the gh-pages build and deploy, so no need to worry about that
 2. commit the compiled ts: `yarn tsc --project server/tsconfig.json`
-3. go into server box, `git pull`, `pm2 restart all`
+3. go into server box, `git pull`, `pm2 restart hips_socket_server`
 4. any nginx changes? config file lives at `/etc/nginx/sites-available/default`, run `service nginx restart` when ready
 5. monitor using `pm2 monit`
 
