@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef } from "react";
 import PunchLine from './PunchLine';
 import '../styles/App.css';
 
@@ -11,12 +11,11 @@ interface Props {
   color: string;
 }
 
-function Sprite({ punchRef, x, y, dir, punching, color }: Props, ref: any) {
-  const [punchDir, setPunchDir] = useState('n');
-
-  useEffect(() => {
-    if (dir !== '') setPunchDir(dir);
-  }, [dir]);
+function Sprite(
+  { punchRef, x, y, dir, punching, color }: Props,
+  ref: React.ForwardedRef<HTMLDivElement>,
+) {
+  const punchDir = dir || "n";
 
   return (
     <>

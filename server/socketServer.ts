@@ -9,12 +9,18 @@ interface SocketData extends Socket<
   DefaultEventsMap,
   DefaultEventsMap
 > {
-  data: any;
+  data: Record<string, unknown>;
 }
 
 interface PositionUpdate {
   pos: PosData;
   hitBox: HitBox;
+}
+
+interface PunchCollisionResult {
+  punchCollision: boolean;
+  puncher?: string;
+  opponent?: string;
 }
 
 const socketConfig =
@@ -96,7 +102,9 @@ io.on("connection", (socket: SocketData) => {
   });
 
   // receive player punch data, return response of opponents hit
-  socket.on("punchCollision", (punchHitBox: HitBox, callback) => {
+  socket.on(
+    "punchCollision",
+    (punchHitBox: HitBox, callback: (result: PunchCollisionResult) => void) => {
     const opponentIds = Object.keys(playerData).filter((id) => id != socket.id);
     const {
       bottom: pBottom,
@@ -136,7 +144,8 @@ io.on("connection", (socket: SocketData) => {
         });
       }
     }
-  });
+    },
+  );
 
   socket.on("disconnect", () => {
     delete playerData[socket.id];
@@ -144,8 +153,5 @@ io.on("connection", (socket: SocketData) => {
     updateClientIds();
   });
 });
-
-io.on("disconnect", (socket: any) => updateClientIds());
-io.on("reconnect", (socket: any) => updateClientIds());
 
 io.listen(8000);

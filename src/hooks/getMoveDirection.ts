@@ -89,7 +89,7 @@ const getMoveDirection = (direction: string, border: Set<string>) => {
     wes: s,
   };
 
-  if (moveMap.hasOwnProperty(direction)) {
+  if (Object.hasOwn(moveMap, direction)) {
     moveMap[direction as keyof typeof moveMap]();
   }
 

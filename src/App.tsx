@@ -6,6 +6,7 @@ import { Socket, io } from "socket.io-client";
 import "./styles/App.css";
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
+type SocketError = Error & { description?: string };
 
 function App() {
   const borderRef = useRef<HTMLDivElement>(null);
@@ -31,7 +32,7 @@ function App() {
         setConnected(true);
       };
 
-      const onSocketError = (err: any) => {
+      const onSocketError = (err: SocketError) => {
         console.error("Error occured with socket.io", err);
         setSocketError(true);
       };
@@ -79,7 +80,7 @@ function App() {
         <h2>🚧 under construction 🚧</h2>
         <p>use arrow/wasd to move, space to "punch"</p>
         Connected clients:{" "}
-        {clients?.map((id: any) => {
+        {clients?.map((id: string) => {
           if (socket === undefined || id !== socket.id) return id + ", ";
           // is this local client id
           else
