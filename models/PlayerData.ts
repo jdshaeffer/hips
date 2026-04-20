@@ -1,5 +1,5 @@
-import { PosData } from './PosData';
-import { HitBox } from './HitBox';
+import type { PosData } from './PosData';
+import type { HitBox } from './HitBox';
 
 export interface PlayerData {
   color: string;

@@ -1,7 +1,7 @@
 import '../styles/App.css';
 
 interface PunchLineProps {
-  punchRef: React.RefObject<HTMLDivElement>;
+  punchRef: React.RefObject<HTMLDivElement | null>;
   punchDirection: string;
   posX: number;
   posY: number;

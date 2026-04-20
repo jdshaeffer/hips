@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
-import { DefaultEventsMap } from '@socket.io/component-emitter';
-import { PlayerData } from '../../models/PlayerData';
-import { PosData } from '../../models/PosData';
+import type { DefaultEventsMap } from '@socket.io/component-emitter';
+import type { PlayerData } from '../../models/PlayerData';
+import type { PosData } from '../../models/PosData';
 import Sprite from './Sprite';
 
 interface Props {

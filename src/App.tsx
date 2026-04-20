@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { DefaultEventsMap } from '@socket.io/component-emitter';
-import Player from './components/Player';
-import RemotePlayer from './components/RemotePlayer';
-import { Socket, io } from 'socket.io-client';
-import './styles/App.css';
+import { useEffect, useRef, useState } from "react";
+import type { DefaultEventsMap } from "@socket.io/component-emitter";
+import Player from "./components/Player";
+import RemotePlayer from "./components/RemotePlayer";
+import { Socket, io } from "socket.io-client";
+import "./styles/App.css";
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap>;
 
@@ -14,18 +14,17 @@ function App() {
   const [connected, setConnected] = useState<boolean>(true);
 
   useEffect(() => {
-    socket =
-      process.env.NODE_ENV === 'production'
-        ? io('https://nycmud.com', {
-            path: '/socket.io',
-          })
-        : io('http://localhost:5000');
+    socket = import.meta.env.PROD
+      ? io("https://nycmud.com", {
+          path: "/socket.io",
+        })
+      : io("http://localhost:8000");
 
     if (socket) {
       const onSocketConnect = () => {
         if (socketError || !connected) {
-          console.log('Socket reconnected!');
-          socket.emit('requestCacheDump');
+          console.log("Socket reconnected!");
+          socket.emit("requestCacheDump");
         }
 
         setSocketError(false);
@@ -33,7 +32,7 @@ function App() {
       };
 
       const onSocketError = (err: any) => {
-        console.error('Error occured with socket.io', err);
+        console.error("Error occured with socket.io", err);
         setSocketError(true);
       };
 
@@ -42,26 +41,26 @@ function App() {
       };
 
       // status
-      socket.on('connect_error', onSocketError);
-      socket.on('reconnect_error', onSocketError);
-      socket.on('reconnect_failure', onSocketError);
-      socket.on('error', onSocketError);
+      socket.on("connect_error", onSocketError);
+      socket.on("reconnect_error", onSocketError);
+      socket.on("reconnect_failure", onSocketError);
+      socket.on("error", onSocketError);
 
-      socket.on('connect', onSocketConnect);
-      socket.on('reconnect', onSocketConnect);
-      socket.on('disconnect', onSocketDisconnect);
+      socket.on("connect", onSocketConnect);
+      socket.on("reconnect", onSocketConnect);
+      socket.on("disconnect", onSocketDisconnect);
 
       // data updating
-      socket.on('clientUpdate', (clientIds: string[]) => {
+      socket.on("clientUpdate", (clientIds: string[]) => {
         setClients(clientIds);
-        socket.emit('requestCacheDump');
+        socket.emit("requestCacheDump");
       });
     }
   }, [connected, socketError]);
 
   return (
     <>
-      <div ref={borderRef} className='center-box'>
+      <div ref={borderRef} className="center-box">
         <Player socket={socket} borderRef={borderRef} />
         {clients
           ?.filter((id) => socket !== undefined && id !== socket.id)
@@ -71,28 +70,28 @@ function App() {
       </div>
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          color: 'white',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          color: "white",
         }}
       >
         <h2>🚧 under construction 🚧</h2>
         <p>use arrow/wasd to move, space to "punch"</p>
-        Connected clients:{' '}
+        Connected clients:{" "}
         {clients?.map((id: any) => {
-          if (socket === undefined || id !== socket.id) return id + ', ';
+          if (socket === undefined || id !== socket.id) return id + ", ";
           // is this local client id
           else
             return (
-              <i key={id} className='local-client-id'>
-                {id} (self),{' '}
+              <i key={id} className="local-client-id">
+                {id} (self),{" "}
               </i>
             );
         })}
       </div>
-      <div className='network-status'>
-        {connected ? '' : socketError ? '🟥' : '🟧'}
+      <div className="network-status">
+        {connected ? "" : socketError ? "🟥" : "🟧"}
       </div>
     </>
   );

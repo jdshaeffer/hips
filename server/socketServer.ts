@@ -1,11 +1,14 @@
-import { Server, Socket } from 'socket.io';
-import { DefaultEventsMap } from 'socket.io/dist/typed-events';
-import { HitBox } from '../models/HitBox';
-import { PlayerData } from '../models/PlayerData';
-import { PosData } from '../models/PosData';
+import { Server, Socket } from "socket.io";
+import type { DefaultEventsMap } from "socket.io";
+import type { HitBox } from "../models/HitBox";
+import type { PlayerData } from "../models/PlayerData";
+import type { PosData } from "../models/PosData";
 
-interface SocketData
-  extends Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap> {
+interface SocketData extends Socket<
+  DefaultEventsMap,
+  DefaultEventsMap,
+  DefaultEventsMap
+> {
   data: any;
 }
 
@@ -15,18 +18,18 @@ interface PositionUpdate {
 }
 
 const socketConfig =
-  process.env.NODE_ENV === 'prod'
+  process.env.NODE_ENV === "prod"
     ? {
-        path: '/socket.io',
+        path: "/socket.io",
         cors: {
-          origin: 'https://jdshaeffer.github.io',
-          allowedHeaders: ['Access-Control-Allow-Origin'],
-          methods: ['GET', 'POST'],
+          origin: "https://jdshaeffer.github.io",
+          allowedHeaders: ["Access-Control-Allow-Origin"],
+          methods: ["GET", "POST"],
         },
       }
     : {
         cors: {
-          origin: ['http://localhost:3000', 'https://jdshaeffer.github.io'],
+          origin: ["http://localhost:5173", "https://jdshaeffer.github.io"],
         },
       };
 
@@ -34,7 +37,7 @@ const io = new Server(socketConfig);
 const playerData: { [key: string]: PlayerData } = {};
 
 const getClientIds = (): string[] => {
-  return Array.from(io.of('/').sockets.keys());
+  return Array.from(io.of("/").sockets.keys());
 };
 
 const updateClientIds = () => {
@@ -45,19 +48,19 @@ const updateClientIds = () => {
     if (!clientIds.includes(id)) delete playerData[id];
   });
 
-  io.emit('clientUpdate', getClientIds());
+  io.emit("clientUpdate", getClientIds());
 };
 
-io.on('connection', (socket: SocketData) => {
+io.on("connection", (socket: SocketData) => {
   console.log(`Client ${socket.id} connected.`);
   playerData[socket.id] = {
     pos: {
       x: 135,
       y: 135,
-      dir: '',
+      dir: "",
     },
-    name: 'bob',
-    color: '#FFFFFF',
+    name: "bob",
+    color: "#FFFFFF",
     hitBox: { top: 0, left: 0, bottom: 0, right: 0 },
   };
 
@@ -71,7 +74,7 @@ io.on('connection', (socket: SocketData) => {
   socket.on(`requestCacheDump${socket.id}`, () => {
     updateClientIds();
     Object.keys(playerData).forEach((pId: string) =>
-      socket.emit(`playerUpdate${pId}`, playerData[pId])
+      socket.emit(`playerUpdate${pId}`, playerData[pId]),
     );
   });
 
@@ -93,7 +96,7 @@ io.on('connection', (socket: SocketData) => {
   });
 
   // receive player punch data, return response of opponents hit
-  socket.on('punchCollision', (punchHitBox: HitBox, callback) => {
+  socket.on("punchCollision", (punchHitBox: HitBox, callback) => {
     const opponentIds = Object.keys(playerData).filter((id) => id != socket.id);
     const {
       bottom: pBottom,
@@ -126,7 +129,7 @@ io.on('connection', (socket: SocketData) => {
           puncher: socket.id,
           opponent: id,
         });
-        console.log('*************PUNCH************');
+        console.log("*************PUNCH************");
       } else {
         callback({
           punchCollision: false,
@@ -135,14 +138,14 @@ io.on('connection', (socket: SocketData) => {
     }
   });
 
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     delete playerData[socket.id];
     console.log(`Client ${socket.id} disconnected.`);
     updateClientIds();
   });
 });
 
-io.on('disconnect', (socket: any) => updateClientIds());
-io.on('reconnect', (socket: any) => updateClientIds());
+io.on("disconnect", (socket: any) => updateClientIds());
+io.on("reconnect", (socket: any) => updateClientIds());
 
-io.listen(5000);
+io.listen(8000);
