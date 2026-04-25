@@ -24,9 +24,8 @@ function Sprite(
         ref={ref}
         style={{
           position: 'absolute',
-          top: y,
-          left: x,
-          zIndex: y,
+          transform: `translate(${x}px, ${y}px)`,
+          zIndex: Math.round(y),
           padding: '10px',
           border: `2px solid ${color}`,
         }}
