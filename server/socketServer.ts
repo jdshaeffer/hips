@@ -1,157 +1,212 @@
-import { Server, Socket } from "socket.io";
-import type { DefaultEventsMap } from "socket.io";
-import type { HitBox } from "../models/HitBox";
-import type { PlayerData } from "../models/PlayerData";
-import type { PosData } from "../models/PosData";
+import { Server } from "socket.io";
+import {
+  applyInputToState,
+  getDirectionFromInput,
+} from "../models/movement.ts";
+import type {
+  InputCommand,
+  NetPing,
+  NetPong,
+  PlayerState,
+  PunchResult,
+  WorldSnapshot,
+} from "../models/netcode.ts";
 
-interface SocketData extends Socket<
-  DefaultEventsMap,
-  DefaultEventsMap,
-  DefaultEventsMap
-> {
-  data: Record<string, unknown>;
-}
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "https://<GITHUB_PAGES_DOMAIN_PLACEHOLDER>",
+];
 
-interface PositionUpdate {
-  pos: PosData;
-  hitBox: HitBox;
-}
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-interface PunchCollisionResult {
-  punchCollision: boolean;
-  puncher?: string;
-  opponent?: string;
-}
+const corsOrigins = allowedOrigins.length > 0 ? allowedOrigins : DEFAULT_ALLOWED_ORIGINS;
+const serverPort = Number(process.env.PORT || "8000");
 
-const socketConfig =
-  process.env.NODE_ENV === "prod"
-    ? {
-        path: "/socket.io",
-        cors: {
-          origin: "https://jdshaeffer.github.io",
-          allowedHeaders: ["Access-Control-Allow-Origin"],
-          methods: ["GET", "POST"],
-        },
-      }
-    : {
-        cors: {
-          origin: ["http://localhost:5173", "https://jdshaeffer.github.io"],
-        },
-      };
+const socketConfig = {
+  path: "/socket.io",
+  cors: {
+    origin: corsOrigins,
+    allowedHeaders: ["Access-Control-Allow-Origin"],
+    methods: ["GET", "POST"],
+  },
+};
 
 const io = new Server(socketConfig);
-const playerData: { [key: string]: PlayerData } = {};
+const players: Record<string, PlayerState> = {};
+const latestInputs: Record<string, InputCommand> = {};
+const pendingPunches = new Set<string>();
+let tick = 0;
+const TICK_RATE = 30;
+const SNAPSHOT_RATE = 15;
+const SNAPSHOT_INTERVAL = Math.max(1, Math.floor(TICK_RATE / SNAPSHOT_RATE));
 
 const getClientIds = (): string[] => {
   return Array.from(io.of("/").sockets.keys());
 };
 
+const randColor = () => {
+  return (
+    "#" +
+    ((Math.random() * 0x888888 + 0x888888) << 0).toString(16).padStart(6, "0")
+  );
+};
+
 const updateClientIds = () => {
   const clientIds = getClientIds();
-  const playerIds = Object.keys(playerData);
+  const playerIds = Object.keys(players);
 
   playerIds.forEach((id) => {
-    if (!clientIds.includes(id)) delete playerData[id];
+    if (!clientIds.includes(id)) {
+      delete players[id];
+      delete latestInputs[id];
+      pendingPunches.delete(id);
+    }
   });
 
   io.emit("clientUpdate", getClientIds());
 };
 
-io.on("connection", (socket: SocketData) => {
+const emitSnapshot = () => {
+  const snapshot: WorldSnapshot = {
+    serverTime: Date.now(),
+    tick,
+    players: Object.values(players),
+  };
+  io.emit("worldSnapshot", snapshot);
+};
+
+const resolvePunches = () => {
+  for (const puncherId of pendingPunches) {
+    const puncher = players[puncherId];
+    if (!puncher) continue;
+    let hit = false;
+
+    for (const opponent of Object.values(players)) {
+      if (opponent.id === puncherId) continue;
+      const dx = puncher.x - opponent.x;
+      const dy = puncher.y - opponent.y;
+      if (Math.hypot(dx, dy) <= 34) {
+        const result: PunchResult = {
+          puncherId,
+          opponentId: opponent.id,
+          hit: true,
+          serverTime: Date.now(),
+        };
+        io.emit("punchResult", result);
+        hit = true;
+      }
+    }
+
+    if (!hit) {
+      io.emit("punchResult", {
+        puncherId,
+        opponentId: "",
+        hit: false,
+        serverTime: Date.now(),
+      } satisfies PunchResult);
+    }
+  }
+  pendingPunches.clear();
+};
+
+const serverTick = () => {
+  tick += 1;
+  const dtSeconds = 1 / TICK_RATE;
+  for (const [id, player] of Object.entries(players)) {
+    const input = latestInputs[id] ?? {
+      seq: player.lastProcessedInput,
+      timestamp: Date.now(),
+      dt: dtSeconds * 1000,
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      punch: false,
+    };
+    const nextState = applyInputToState(player, input, dtSeconds);
+    players[id] = {
+      ...nextState,
+      lastProcessedInput: input.seq,
+      dir: getDirectionFromInput(input) || nextState.dir,
+    };
+  }
+  resolvePunches();
+  if (tick % SNAPSHOT_INTERVAL === 0) {
+    emitSnapshot();
+  }
+};
+
+setInterval(serverTick, 1000 / TICK_RATE);
+
+io.on("connection", (socket) => {
   console.log(`Client ${socket.id} connected.`);
-  playerData[socket.id] = {
-    pos: {
-      x: 135,
-      y: 135,
-      dir: "",
-    },
+  players[socket.id] = {
+    id: socket.id,
+    x: 135,
+    y: 135,
+    vx: 0,
+    vy: 0,
+    dir: "",
     name: "bob",
-    color: "#FFFFFF",
-    hitBox: { top: 0, left: 0, bottom: 0, right: 0 },
+    color: randColor(),
+    lastProcessedInput: 0,
+  };
+  latestInputs[socket.id] = {
+    seq: 0,
+    timestamp: Date.now(),
+    dt: 0,
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    punch: false,
   };
 
   updateClientIds();
+  emitSnapshot();
 
-  socket.on(`requestPlayerUpdate${socket.id}`, () => {
-    socket.emit(`playerUpdate${socket.id}`, playerData[socket.id]);
+  socket.on("inputCommand", (input: InputCommand) => {
+    latestInputs[socket.id] = input;
+    if (input.punch) pendingPunches.add(socket.id);
   });
 
-  // Purpose: request getting the entirety of the player values
-  socket.on(`requestCacheDump${socket.id}`, () => {
-    updateClientIds();
-    Object.keys(playerData).forEach((pId: string) =>
-      socket.emit(`playerUpdate${pId}`, playerData[pId]),
-    );
+  socket.on("punchCommand", (input: Pick<InputCommand, "seq" | "timestamp">) => {
+    latestInputs[socket.id] = {
+      ...(latestInputs[socket.id] ?? {
+        seq: 0,
+        timestamp: Date.now(),
+        dt: 0,
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        punch: false,
+      }),
+      seq: input.seq,
+      timestamp: input.timestamp,
+      punch: true,
+    };
+    pendingPunches.add(socket.id);
   });
 
-  // Purpose: update all clients with entire player values
-  socket.on(`playerUpdate${socket.id}`, (pd: PlayerData) => {
-    playerData[socket.id] = pd;
-    socket.broadcast.emit(`playerUpdate${socket.id}`, pd);
+  socket.on("netPing", ({ clientTime }: NetPing) => {
+    socket.emit("netPong", {
+      clientTime,
+      serverTime: Date.now(),
+    } satisfies NetPong);
   });
-
-  // Purpose: update all clients with only position values
-  socket.on(`positionUpdate${socket.id}`, ({ pos, hitBox }: PositionUpdate) => {
-    playerData[socket.id].pos = pos;
-    playerData[socket.id].hitBox = hitBox;
-    socket.broadcast.emit(`positionUpdate${socket.id}`, pos);
-  });
-
-  socket.on(`punchUpdate${socket.id}`, (isPunching) => {
-    socket.broadcast.emit(`punchUpdate${socket.id}`, isPunching);
-  });
-
-  // receive player punch data, return response of opponents hit
-  socket.on(
-    "punchCollision",
-    (punchHitBox: HitBox, callback: (result: PunchCollisionResult) => void) => {
-    const opponentIds = Object.keys(playerData).filter((id) => id != socket.id);
-    const {
-      bottom: pBottom,
-      top: pTop,
-      left: pLeft,
-      right: pRight,
-    } = punchHitBox;
-    for (const id of opponentIds) {
-      const opponentHitBox = playerData[id].hitBox;
-      const {
-        bottom: oBottom,
-        top: oTop,
-        left: oLeft,
-        right: oRight,
-      } = opponentHitBox;
-      let xPunch = false;
-      let yPunch = false;
-      if (pBottom - oBottom <= 24 && pTop - oTop <= 24) {
-        xPunch = true;
-      }
-      if (
-        (pLeft - oLeft < 22 && pLeft - oLeft > -2) ||
-        (pRight - oRight > 2 && pRight - oRight < 22)
-      ) {
-        yPunch = true;
-      }
-      if (xPunch && yPunch) {
-        callback({
-          punchCollision: true,
-          puncher: socket.id,
-          opponent: id,
-        });
-        console.log("*************PUNCH************");
-      } else {
-        callback({
-          punchCollision: false,
-        });
-      }
-    }
-    },
-  );
 
   socket.on("disconnect", () => {
-    delete playerData[socket.id];
+    delete players[socket.id];
+    delete latestInputs[socket.id];
+    pendingPunches.delete(socket.id);
     console.log(`Client ${socket.id} disconnected.`);
     updateClientIds();
+    emitSnapshot();
   });
 });
 
-io.listen(8000);
+io.listen(serverPort);

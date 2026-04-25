@@ -37,3 +37,12 @@
   top: 7px;
   font-size: xx-small;
 }
+
+.net-debug {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  color: #c9d1ff;
+  font-size: 11px;
+  line-height: 1.3;
+}

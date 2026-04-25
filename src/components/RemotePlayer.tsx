@@ -1,63 +1,100 @@
-import { useEffect, useRef, useState } from 'react';
-import { Socket } from 'socket.io-client';
-import type { DefaultEventsMap } from '@socket.io/component-emitter';
-import type { PlayerData } from '../../models/PlayerData';
-import type { PosData } from '../../models/PosData';
-import Sprite from './Sprite';
+import { useEffect, useRef, useState } from "react";
+import { Socket } from "socket.io-client";
+import type { PlayerState, PunchResult, WorldSnapshot } from "../../models/netcode";
+import Sprite from "./Sprite";
 
 interface Props {
-  socket: Socket<DefaultEventsMap, DefaultEventsMap>;
+  socket: Socket;
   clientId: string;
 }
 
-// function Player(isLocal = true, socketId = "") {
 function RemotePlayer({ socket, clientId }: Props) {
   const punchRef = useRef<HTMLDivElement>(null);
-
   const [isPunching, setIsPunching] = useState(false);
-  const [x, setX] = useState(135);
-  const [y, setY] = useState(135);
-  const [color, setColor] = useState('#ffffff');
-  const [direction, setDirection] = useState('');
-
-  // html ref
+  const [renderState, setRenderState] = useState<PlayerState>({
+    id: clientId,
+    x: 135,
+    y: 135,
+    vx: 0,
+    vy: 0,
+    dir: "s",
+    color: "#ffffff",
+    name: "remote",
+    lastProcessedInput: 0,
+  });
+  const snapshotsRef = useRef<Array<{ receivedAt: number; state: PlayerState }>>([]);
+  const interpolationDelayMs = 100;
   const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    socket.on(`playerUpdate${clientId}`, (playerChanges: PlayerData) => {
-      if (playerChanges.pos.x !== x) setX(playerChanges.pos.x);
-      if (playerChanges.pos.y !== y) setY(playerChanges.pos.y);
-      if (playerChanges.pos.dir !== direction)
-        setDirection(playerChanges.pos.dir);
-      if (playerChanges.color !== color) {
-        setColor(playerChanges.color);
+    const onWorldSnapshot = (snapshot: WorldSnapshot) => {
+      const state = snapshot.players.find((player) => player.id === clientId);
+      if (!state) return;
+      snapshotsRef.current.push({ receivedAt: performance.now(), state });
+      if (snapshotsRef.current.length > 40) {
+        snapshotsRef.current.shift();
       }
-    });
-    socket.on(`positionUpdate${clientId}`, (posChanges: PosData) => {
-      if (posChanges.x !== x) setX(posChanges.x);
-      if (posChanges.y !== y) setY(posChanges.y);
-      if (posChanges.dir !== direction) {
-        setDirection(posChanges.dir);
-      }
-    });
-    socket.on(`punchUpdate${clientId}`, (isPunching: boolean) => {
-      setIsPunching(isPunching);
-    });
+    };
 
-    // request initial data for player
-    socket.emit(`requestCacheDump${socket.id}`);
-  }, [socket, clientId, color, direction, x, y]);
+    const onPunchResult = ({ puncherId }: PunchResult) => {
+      if (puncherId === clientId) {
+        setIsPunching(true);
+        window.setTimeout(() => setIsPunching(false), 150);
+      }
+    };
+
+    socket.on("worldSnapshot", onWorldSnapshot);
+    socket.on("punchResult", onPunchResult);
+    return () => {
+      socket.off("worldSnapshot", onWorldSnapshot);
+      socket.off("punchResult", onPunchResult);
+    };
+  }, [clientId, socket]);
+
+  useEffect(() => {
+    let frameId: number;
+    const tick = () => {
+      const targetTime = performance.now() - interpolationDelayMs;
+      const buffer = snapshotsRef.current;
+      if (buffer.length >= 2) {
+        let previous = buffer[0];
+        let next = buffer[1];
+
+        for (let index = 1; index < buffer.length; index += 1) {
+          if (buffer[index].receivedAt >= targetTime) {
+            next = buffer[index];
+            previous = buffer[Math.max(0, index - 1)];
+            break;
+          }
+          previous = buffer[index];
+        }
+
+        const span = Math.max(1, next.receivedAt - previous.receivedAt);
+        const alpha = Math.min(1, Math.max(0, (targetTime - previous.receivedAt) / span));
+        setRenderState({
+          ...next.state,
+          x: previous.state.x + (next.state.x - previous.state.x) * alpha,
+          y: previous.state.y + (next.state.y - previous.state.y) * alpha,
+        });
+      } else if (buffer.length === 1) {
+        setRenderState(buffer[0].state);
+      }
+      frameId = requestAnimationFrame(tick);
+    };
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
 
   return (
     <>
       <Sprite
         punchRef={punchRef}
         ref={playerRef}
-        x={x}
-        y={y}
-        dir={direction}
+        x={renderState.x}
+        y={renderState.y}
+        dir={renderState.dir}
         punching={isPunching}
-        color={color}
+        color={renderState.color}
       />
     </>
   );

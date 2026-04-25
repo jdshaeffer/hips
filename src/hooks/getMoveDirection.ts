@@ -1,97 +1,44 @@
+import {
+  PLAYER_SPEED,
+  applyInputToState,
+  getDirectionFromInput,
+} from "../../models/movement";
+import type { InputCommand, PlayerState } from "../../models/netcode";
+
+const directionToInput = (direction: string): InputCommand => {
+  return {
+    seq: 0,
+    timestamp: 0,
+    dt: 0,
+    up: direction.includes("n"),
+    down: direction.includes("s"),
+    left: direction.includes("w"),
+    right: direction.includes("e"),
+    punch: false,
+  };
+};
+
 const getMoveDirection = (direction: string, border: Set<string>) => {
-  let dx = 0,
-    dy = 0;
-  const speed = 2;
-  const diagspd = 1.4;
-
-  const n = () => !border.has('n') && (dy -= speed);
-  const s = () => !border.has('s') && (dy += speed);
-  const e = () => !border.has('e') && (dx += speed);
-  const w = () => !border.has('w') && (dx -= speed);
-  const ne = () => {
-    if (border.has('n') && !border.has('e')) {
-      dx += speed;
-    } else if (border.has('e') && !border.has('n')) {
-      dy -= speed;
-    } else if (!border.has('n') && !border.has('e')) {
-      dy -= diagspd;
-      dx += diagspd;
-    }
-  };
-  const nw = () => {
-    if (border.has('n') && !border.has('w')) {
-      dx -= speed;
-    } else if (border.has('w') && !border.has('n')) {
-      dy -= speed;
-    } else if (!border.has('n') && !border.has('w')) {
-      dy -= diagspd;
-      dx -= diagspd;
-    }
-  };
-  const se = () => {
-    if (border.has('s') && !border.has('e')) {
-      dx += speed;
-    } else if (border.has('e') && !border.has('s')) {
-      dy += speed;
-    } else if (!border.has('s') && !border.has('e')) {
-      dy += diagspd;
-      dx += diagspd;
-    }
-  };
-  const sw = () => {
-    if (border.has('s') && !border.has('w')) {
-      dx -= speed;
-    } else if (border.has('w') && !border.has('s')) {
-      dy += speed;
-    } else if (!border.has('s') && !border.has('w')) {
-      dy += diagspd;
-      dx -= diagspd;
-    }
-  };
-
-  // prefer hardcoded directions to get constant lookup
-  const moveMap = {
-    n: n,
-    s: s,
-    e: e,
-    w: w,
-    ne: ne,
-    en: ne,
-    se: se,
-    es: se,
-    sw: sw,
-    ws: sw,
-    nw: nw,
-    wn: nw,
-    nse: e,
-    nsw: w,
-    nes: e,
-    new: n,
-    nws: w,
-    nwe: n,
-    ens: e,
-    enw: n,
-    esn: e,
-    esw: s,
-    ewn: n,
-    ews: s,
-    sne: e,
-    snw: w,
-    sen: e,
-    sew: s,
-    swn: w,
-    swe: s,
-    wne: n,
-    wns: w,
-    wse: s,
-    wsn: w,
-    wen: n,
-    wes: s,
-  };
-
-  if (Object.hasOwn(moveMap, direction)) {
-    moveMap[direction as keyof typeof moveMap]();
-  }
+  const input = directionToInput(direction);
+  const simulated = applyInputToState(
+    {
+      id: "local",
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      dir: getDirectionFromInput(input),
+      color: "#fff",
+      name: "local",
+      lastProcessedInput: 0,
+    } as PlayerState,
+    input,
+    1 / PLAYER_SPEED,
+  );
+  let dx = simulated.x;
+  let dy = simulated.y;
+  if ((dy < 0 && border.has("n")) || (dy > 0 && border.has("s"))) dy = 0;
+  if ((dx < 0 && border.has("w")) || (dx > 0 && border.has("e"))) dx = 0;
 
   return [dx, dy];
 };

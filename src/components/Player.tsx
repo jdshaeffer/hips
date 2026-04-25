@@ -1,26 +1,14 @@
-import type { DefaultEventsMap } from "@socket.io/component-emitter";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Socket } from "socket.io-client";
-import type { HitBox } from "../../models/HitBox";
-import getMoveDirection from "../hooks/getMoveDirection";
+import { applyInputToState } from "../../models/movement";
+import type { InputCommand, PlayerState, PunchResult, WorldSnapshot } from "../../models/netcode";
 import "../styles/App.css";
 import Sprite from "./Sprite";
 
 interface Props {
-  socket: Socket<DefaultEventsMap, DefaultEventsMap>;
-  borderRef: React.RefObject<HTMLDivElement | null>;
+  socket: Socket;
+  onStats?: (stats: { fps?: number; corrections?: number }) => void;
 }
-
-const directionMap: { [key: string]: string } = {
-  ArrowUp: "n",
-  ArrowDown: "s",
-  ArrowRight: "e",
-  ArrowLeft: "w",
-  w: "n",
-  a: "w",
-  s: "s",
-  d: "e",
-};
 
 const randColor = () => {
   return (
@@ -29,158 +17,156 @@ const randColor = () => {
   );
 };
 
-function Player({ socket, borderRef }: Props) {
-  const [isPunching, setIsPunching] = useState(false);
-  const [x, setX] = useState(135);
-  const [y, setY] = useState(135);
-  const [direction, setDirection] = useState("");
-  const [color] = useState(randColor());
-  const directionRef = useRef(direction);
-  const animationFrameRef = useRef<number | null>(null);
+const movementKeys = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d"]);
 
-  // html refs and hitboxes
+function Player({ socket, onStats }: Props) {
+  const [isPunching, setIsPunching] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   const punchRef = useRef<HTMLDivElement>(null);
-  const [playerHitBox, setPlayerHitBox] = useState<HitBox>({
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
+  const [localState, setLocalState] = useState<PlayerState>({
+    id: "",
+    x: 135,
+    y: 135,
+    vx: 0,
+    vy: 0,
+    dir: "",
+    color: randColor(),
+    name: "bob",
+    lastProcessedInput: 0,
   });
-  const [borderHitBox, setBorderHitBox] = useState<HitBox>({
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  });
-
-  // other state
-  const [isMoving, setIsMoving] = useState(false);
-
-  // const validPunchDirection = () => {
-  //   let dir = direction.slice(0, 2);
-  //   if (dir === 'ew' || dir === 'we' || dir === 'sn' || dir === 'ns') {
-  //     return direction[1];
-  //   } else {
-  //     return dir;
-  //   }
-  // };
-
-  const isValidDirection = (key: string, dir: string) =>
-    ((key === "ArrowUp" || key === "w") && !dir.includes("n")) ||
-    ((key === "ArrowDown" || key === "s") && !dir.includes("s")) ||
-    ((key === "ArrowRight" || key === "d") && !dir.includes("e")) ||
-    ((key === "ArrowLeft" || key === "a") && !dir.includes("w"));
-
-  const checkBorderCollision = useCallback(() => {
-    const borderDetected = new Set<string>();
-    if (playerHitBox) {
-      const hasCollided = (side: string) =>
-        0 < playerHitBox[side] && playerHitBox[side] < 5;
-
-      if (hasCollided("left")) {
-        borderDetected.add("w");
-      } else {
-        borderDetected.delete("w");
-      }
-      if (hasCollided("right")) {
-        borderDetected.add("e");
-      } else {
-        borderDetected.delete("e");
-      }
-      if (hasCollided("bottom")) {
-        borderDetected.add("s");
-      } else {
-        borderDetected.delete("s");
-      }
-      if (hasCollided("top")) {
-        borderDetected.add("n");
-      } else {
-        borderDetected.delete("n");
-      }
-    }
-    return borderDetected;
-  }, [playerHitBox]);
-
-  // set initial player and border hit boxes
-  useEffect(() => {
-    if (playerRef && borderRef) {
-      const playerDiv = playerRef.current?.getBoundingClientRect();
-      const borderDiv = borderRef.current?.getBoundingClientRect();
-      if (borderDiv) {
-        setBorderHitBox({
-          top: borderDiv.top,
-          bottom: borderDiv.bottom,
-          left: borderDiv.left,
-          right: borderDiv.right,
-        });
-        if (playerDiv) {
-          setPlayerHitBox({
-            top: playerDiv.top - borderDiv.top,
-            bottom: borderDiv.bottom - playerDiv.bottom,
-            right: borderDiv.right - playerDiv.right,
-            left: playerDiv.left - borderDiv.left,
-          });
-        }
-      }
-    }
-  }, [borderRef]);
+  const localStateRef = useRef(localState);
+  const pressedKeysRef = useRef<Record<string, boolean>>({});
+  const pendingInputsRef = useRef<InputCommand[]>([]);
+  const seqRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  const correctionsRef = useRef(0);
 
   useEffect(() => {
-    directionRef.current = direction;
-  }, [direction]);
+    localStateRef.current = localState;
+  }, [localState]);
 
-  // emit punching update when isPunching changes
   useEffect(() => {
-    socket?.emit(`punchUpdate${socket.id}`, isPunching);
-  }, [isPunching, socket]);
+    const buildInput = (dt: number, punch: boolean): InputCommand => {
+      const keys = pressedKeysRef.current;
+      const input: InputCommand = {
+        seq: (seqRef.current += 1),
+        timestamp: Date.now(),
+        dt,
+        up: !!(keys.ArrowUp || keys.w),
+        down: !!(keys.ArrowDown || keys.s),
+        left: !!(keys.ArrowLeft || keys.a),
+        right: !!(keys.ArrowRight || keys.d),
+        punch,
+      };
+      return input;
+    };
 
-  // emit position update when x/y/direction changes
-  useEffect(() => {
-    socket?.emit(`positionUpdate${socket.id}`, {
-      pos: { x, y, dir: direction },
-      hitBox: playerHitBox,
-    });
-  }, [x, y, direction, playerHitBox, socket]);
+    const sendInputTimer = window.setInterval(() => {
+      const input = buildInput(50, false);
+      pendingInputsRef.current.push(input);
+      socket.emit("inputCommand", input);
+    }, 50);
 
-  // set initial server values after client mounts, emit to remote players
+    return () => window.clearInterval(sendInputTimer);
+  }, [socket]);
+
   useEffect(() => {
-    if (socket) {
-      socket.emit(`playerUpdate${socket.id}`, {
-        pos: {
-          x,
-          y,
-          dir: direction,
+    let previousFrame = performance.now();
+    let frameCount = 0;
+    let fpsWindowStart = performance.now();
+
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - previousFrame) / 1000);
+      previousFrame = now;
+      const keys = pressedKeysRef.current;
+      const current = localStateRef.current;
+      const next = applyInputToState(
+        current,
+        {
+          up: !!(keys.ArrowUp || keys.w),
+          down: !!(keys.ArrowDown || keys.s),
+          left: !!(keys.ArrowLeft || keys.a),
+          right: !!(keys.ArrowRight || keys.d),
         },
-        color: color,
-        name: "bob",
-        hitBox: playerHitBox,
-      });
-    }
-  }, [socket, color, direction, playerHitBox, x, y]);
+        dt,
+      );
+      setLocalState(next);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isValidDirection(e.key, direction)) {
-        setIsMoving(true);
-        setDirection(direction + directionMap[e.key]);
+      frameCount += 1;
+      if (now - fpsWindowStart >= 1000) {
+        onStats?.({
+          fps: frameCount,
+          corrections: correctionsRef.current,
+        });
+        frameCount = 0;
+        fpsWindowStart = now;
       }
 
-      if (e.key === " " && !e.repeat) {
-        setIsPunching(true);
-        setTimeout(() => setIsPunching(false), 150);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [onStats]);
+
+  useEffect(() => {
+    const onWorldSnapshot = (snapshot: WorldSnapshot) => {
+      if (!socket.id) return;
+      const authoritative = snapshot.players.find((player) => player.id === socket.id);
+      if (!authoritative) return;
+
+      const current = localStateRef.current;
+      const errorDistance = Math.hypot(authoritative.x - current.x, authoritative.y - current.y);
+      if (errorDistance > 3) {
+        correctionsRef.current += 1;
+      }
+
+      const pending = pendingInputsRef.current.filter(
+        (input) => input.seq > authoritative.lastProcessedInput,
+      );
+      pendingInputsRef.current = pending;
+
+      let reconciled = { ...authoritative };
+      for (const input of pending) {
+        reconciled = applyInputToState(reconciled, input, input.dt / 1000);
+      }
+      setLocalState(reconciled);
+    };
+
+    const onPunchResult = ({ puncherId, opponentId, hit }: PunchResult) => {
+      if (puncherId === socket.id && hit) {
+        console.log(`${puncherId} just clocked ${opponentId}!`);
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === " ") return;
-      const mappedDirection = directionMap[e.key];
-      if (mappedDirection) {
-        const i = direction.indexOf(mappedDirection);
-        setDirection(direction.slice(0, i) + direction.slice(i + 1));
-        if (direction.length === 0) {
-          setIsMoving(false);
-        }
+    socket.on("worldSnapshot", onWorldSnapshot);
+    socket.on("punchResult", onPunchResult);
+    return () => {
+      socket.off("worldSnapshot", onWorldSnapshot);
+      socket.off("punchResult", onPunchResult);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (movementKeys.has(event.key)) {
+        pressedKeysRef.current[event.key] = true;
+      }
+      if (event.key === " " && !event.repeat) {
+        setIsPunching(true);
+        const seq = (seqRef.current += 1);
+        socket.emit("punchCommand", { seq, timestamp: Date.now() });
+        window.setTimeout(() => setIsPunching(false), 150);
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (movementKeys.has(event.key)) {
+        pressedKeysRef.current[event.key] = false;
       }
     };
 
@@ -190,92 +176,18 @@ function Player({ socket, borderRef }: Props) {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [direction]);
-
-  useEffect(() => {
-    if (isMoving && animationFrameRef.current === null) {
-      const tick = () => {
-        const currentDirection = directionRef.current;
-        if (!currentDirection) {
-          setIsMoving(false);
-          animationFrameRef.current = null;
-          return;
-        }
-
-        const [dx, dy] = getMoveDirection(currentDirection, checkBorderCollision());
-        if (dx !== 0 || dy !== 0) {
-          setX((prevX) => prevX + dx);
-          setY((prevY) => prevY + dy);
-        }
-
-        animationFrameRef.current = requestAnimationFrame(tick);
-      };
-
-      animationFrameRef.current = requestAnimationFrame(tick);
-    }
-    if (!isMoving && animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-    };
-  }, [checkBorderCollision, isMoving]);
-
-  useEffect(() => {
-    const playerDiv = playerRef.current?.getBoundingClientRect();
-    if (playerDiv) {
-      setPlayerHitBox({
-        top: playerDiv.top - borderHitBox.top,
-        bottom: borderHitBox.bottom - playerDiv.bottom,
-        right: borderHitBox.right - playerDiv.right,
-        left: playerDiv.left - borderHitBox.left,
-      });
-    }
-  }, [x, y, borderHitBox]);
-
-  useEffect(() => {
-    if (isPunching) {
-      const punchDiv = punchRef.current?.getBoundingClientRect();
-      if (punchDiv) {
-        const punchHitBox = {
-          top: punchDiv.top - borderHitBox.top,
-          bottom: borderHitBox.bottom - punchDiv.bottom,
-          right: borderHitBox.right - punchDiv.right,
-          left: punchDiv.left - borderHitBox.left,
-        };
-
-        // send the player's punchHitBox to the server, check there if it hits any opponent's hitboxes
-        if (socket) {
-          socket.emit(
-            "punchCollision",
-            punchHitBox,
-            (res: { punchCollision: boolean; puncher: string; opponent: string }) => {
-            // TODO res doesn't fully work yet with more than 1 opponent
-            if (res.punchCollision) {
-              console.log(`${res.puncher} just clocked ${res.opponent}!`);
-              // TODO: will need to emit this to everyone
-            }
-            },
-          );
-        }
-      }
-    }
-  }, [isPunching, borderHitBox, socket]);
+  }, [socket]);
 
   return (
     <>
       <Sprite
         punchRef={punchRef}
         ref={playerRef}
-        x={x}
-        y={y}
-        dir={direction}
+        x={localState.x}
+        y={localState.y}
+        dir={localState.dir}
         punching={isPunching}
-        color={color}
+        color={localState.color}
       />
     </>
   );
