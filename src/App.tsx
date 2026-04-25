@@ -123,7 +123,7 @@ function App() {
           color: "white",
         }}
       >
-        <h2>🚧 under construction 🚧</h2>
+        <h2>🚧 under construction!!! 🚧</h2>
         <p>use arrow/wasd to move, space to "punch"</p>
         Connected clients:{" "}
         {clients.map((id: string) => {
