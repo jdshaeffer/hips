@@ -9,8 +9,8 @@ FE and BE for hips: an open-source, web-based party game inspired by the classic
 ## developing
 
 1. clone
-2. install: `yarn`
-3. start FE: `yarn start`
+2. install: `npm i`
+3. start FE: `npm start`
 4. in another terminal tab/window - start BE: `yarn start-server`
 
 ## deploying
