@@ -129,10 +129,21 @@ function Player({ socket, onStats }: Props) {
       }
 
       const errorDistance = Math.hypot(reconciled.x - current.x, reconciled.y - current.y);
-      if (errorDistance > 3) {
+      if (errorDistance > 60) {
+        // Large error (teleport/desync) — snap immediately
         correctionsRef.current += 1;
         localStateRef.current = reconciled;
         setLocalState(reconciled);
+      } else if (errorDistance > 1) {
+        // Small drift — lerp gently so correction is invisible
+        correctionsRef.current += 1;
+        const lerped = {
+          ...reconciled,
+          x: current.x + (reconciled.x - current.x) * 0.2,
+          y: current.y + (reconciled.y - current.y) * 0.2,
+        };
+        localStateRef.current = lerped;
+        setLocalState(lerped);
       }
     };
 
