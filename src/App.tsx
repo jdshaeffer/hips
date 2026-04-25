@@ -71,6 +71,11 @@ function App() {
     socket.on("netPong", onNetPong);
     socket.on("worldSnapshot", onWorldSnapshot);
 
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
     const pingInterval = window.setInterval(() => {
       socket.emit("netPing", { clientTime: Date.now() });
     }, 2500);
@@ -84,6 +89,7 @@ function App() {
     }, 1000);
 
     return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
       window.clearInterval(pingInterval);
       window.clearInterval(snapshotRateInterval);
       socket.off("connect", onSocketConnect);

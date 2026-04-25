@@ -14,7 +14,7 @@ import type {
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:5173",
-  "https://<GITHUB_PAGES_DOMAIN_PLACEHOLDER>",
+  "https://jdshaeffer.github.io",
 ];
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
@@ -34,7 +34,7 @@ const socketConfig = {
   },
 };
 
-const io = new Server(socketConfig);
+const io = new Server({ ...socketConfig, pingTimeout: 5000, pingInterval: 2000 });
 const players: Record<string, PlayerState> = {};
 const latestInputs: Record<string, InputCommand> = {};
 const pendingPunches = new Set<string>();

@@ -37,8 +37,8 @@ Type=simple
 WorkingDirectory=/opt/hips-server
 Environment=NODE_ENV=prod
 Environment=PORT=8000
-Environment=ALLOWED_ORIGINS=https://<GITHUB_PAGES_DOMAIN_PLACEHOLDER>
-ExecStart=/usr/bin/node --loader ts-node/esm server/socketServer.ts
+Environment=ALLOWED_ORIGINS=https://jdshaeffer.github.io
+ExecStart=/usr/bin/node --import tsx/esm server/socketServer.ts
 Restart=always
 RestartSec=3
 User=ubuntu
@@ -62,6 +62,7 @@ server {
     proxy_set_header X-Real-IP \$remote_addr;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_read_timeout 86400;
   }
 }
 EOF

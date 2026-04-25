@@ -42,10 +42,6 @@ function Player({ socket, onStats }: Props) {
   const correctionsRef = useRef(0);
 
   useEffect(() => {
-    localStateRef.current = localState;
-  }, [localState]);
-
-  useEffect(() => {
     const buildInput = (dt: number, punch: boolean): InputCommand => {
       const keys = pressedKeysRef.current;
       const input: InputCommand = {
@@ -90,6 +86,7 @@ function Player({ socket, onStats }: Props) {
         },
         dt,
       );
+      localStateRef.current = next;
       setLocalState(next);
 
       frameCount += 1;
@@ -120,10 +117,6 @@ function Player({ socket, onStats }: Props) {
       if (!authoritative) return;
 
       const current = localStateRef.current;
-      const errorDistance = Math.hypot(authoritative.x - current.x, authoritative.y - current.y);
-      if (errorDistance > 3) {
-        correctionsRef.current += 1;
-      }
 
       const pending = pendingInputsRef.current.filter(
         (input) => input.seq > authoritative.lastProcessedInput,
@@ -134,7 +127,13 @@ function Player({ socket, onStats }: Props) {
       for (const input of pending) {
         reconciled = applyInputToState(reconciled, input, input.dt / 1000);
       }
-      setLocalState(reconciled);
+
+      const errorDistance = Math.hypot(reconciled.x - current.x, reconciled.y - current.y);
+      if (errorDistance > 3) {
+        correctionsRef.current += 1;
+        localStateRef.current = reconciled;
+        setLocalState(reconciled);
+      }
     };
 
     const onPunchResult = ({ puncherId, opponentId, hit }: PunchResult) => {
