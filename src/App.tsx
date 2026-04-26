@@ -3,7 +3,7 @@ import Player from "./components/Player";
 import RemotePlayer from "./components/RemotePlayer";
 import { io, Socket } from "socket.io-client";
 import "./styles/App.css";
-import type { NetPong } from "../models/netcode";
+import type { NetPong, WorldSnapshot } from "../models/netcode";
 
 interface NetStats {
   pingMs: number;
@@ -21,8 +21,14 @@ const initialNetStats: NetStats = {
 
 const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:8000";
 
-function App() {
+interface Props {
+  name?: string;
+  onBack?: () => void;
+}
+
+function App({ name, onBack }: Props) {
   const borderRef = useRef<HTMLDivElement>(null);
+  const playerNamesRef = useRef<Record<string, string>>({});
   const [socket] = useState<Socket>(() =>
     io(socketUrl, {
       path: "/socket.io",
@@ -38,6 +44,7 @@ function App() {
     const onSocketConnect = () => {
       setConnected(true);
       setSocketError(false);
+      socket.emit("setName", name || "anonymous");
     };
 
     const onSocketDisconnect = () => {
@@ -59,8 +66,11 @@ function App() {
       }));
     };
 
-    const onWorldSnapshot = () => {
+    const onWorldSnapshot = (snapshot: WorldSnapshot) => {
       snapshotCounterRef.current += 1;
+      for (const p of snapshot.players) {
+        playerNamesRef.current[p.id] = p.name;
+      }
     };
 
     socket.on("connect", onSocketConnect);
@@ -132,15 +142,42 @@ function App() {
         <h2>🚧 under construction!!! 🚧</h2>
         <p>use arrow/wasd to move, space to "punch"</p>
         Connected clients:{" "}
-        {clients.map((id: string) => {
-          if (id !== socket.id) return `${id}, `;
-          return (
-            <i key={id} className="local-client-id">
-              {id} (self),{" "}
-            </i>
-          );
-        })}
+        {clients
+          .filter((id) => !id.startsWith("npc_"))
+          .map((id: string) => {
+            const displayName = playerNamesRef.current[id] || id;
+            if (id !== socket.id) return `${displayName}, `;
+            return (
+              <i key={id} className="local-client-id">
+                {displayName} (you),{" "}
+              </i>
+            );
+          })}
       </div>
+      {onBack && (
+        <button
+          onClick={onBack}
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontFamily: "'DM Mono', monospace",
+            fontSize: "11px",
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            color: "#444",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: "8px 16px",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#888")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#444")}
+        >
+          ← menu
+        </button>
+      )}
       <div className="network-status">
         {connected ? "" : socketError ? "🟥" : "🟧"}
       </div>

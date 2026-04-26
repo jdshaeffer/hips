@@ -60,6 +60,8 @@ const npcDirections = [
   { up: true,  down: false, left: true,  right: false },
   { up: false, down: true,  left: false, right: true  },
   { up: false, down: true,  left: true,  right: false },
+  { up: false, down: false, left: false, right: false }, // stopped
+  { up: false, down: false, left: false, right: false }, // stopped (weighted 2x)
 ];
 const randomNpcDir = () => npcDirections[Math.floor(Math.random() * npcDirections.length)];
 const randomCooldown = () => TICK_RATE + Math.floor(Math.random() * TICK_RATE * 2);
@@ -245,6 +247,12 @@ io.on("connection", (socket) => {
       punch: true,
     };
     pendingPunches.add(socket.id);
+  });
+
+  socket.on("setName", (name: unknown) => {
+    if (players[socket.id] && typeof name === "string") {
+      players[socket.id].name = name.trim().slice(0, 20) || "anonymous";
+    }
   });
 
   socket.on("netPing", ({ clientTime }: NetPing) => {
