@@ -2,6 +2,9 @@ import { Server } from "socket.io";
 import {
   applyInputToState,
   getDirectionFromInput,
+  WORLD_WIDTH,
+  WORLD_HEIGHT,
+  PLAYER_SIZE,
 } from "../models/movement.ts";
 import type {
   InputCommand,
@@ -43,6 +46,24 @@ const TICK_RATE = 30;
 const SNAPSHOT_RATE = 15;
 const SNAPSHOT_INTERVAL = Math.max(1, Math.floor(TICK_RATE / SNAPSHOT_RATE));
 
+const NPC_COUNT = 5;
+const NPC_PREFIX = "npc_";
+const npcCooldowns: Record<string, number> = {};
+const npcCurrentInputs: Record<string, Pick<InputCommand, "up" | "down" | "left" | "right">> = {};
+
+const npcDirections = [
+  { up: true,  down: false, left: false, right: false },
+  { up: false, down: true,  left: false, right: false },
+  { up: false, down: false, left: true,  right: false },
+  { up: false, down: false, left: false, right: true  },
+  { up: true,  down: false, left: false, right: true  },
+  { up: true,  down: false, left: true,  right: false },
+  { up: false, down: true,  left: false, right: true  },
+  { up: false, down: true,  left: true,  right: false },
+];
+const randomNpcDir = () => npcDirections[Math.floor(Math.random() * npcDirections.length)];
+const randomCooldown = () => TICK_RATE + Math.floor(Math.random() * TICK_RATE * 2);
+
 const getClientIds = (): string[] => {
   return Array.from(io.of("/").sockets.keys());
 };
@@ -59,14 +80,14 @@ const updateClientIds = () => {
   const playerIds = Object.keys(players);
 
   playerIds.forEach((id) => {
-    if (!clientIds.includes(id)) {
+    if (!id.startsWith(NPC_PREFIX) && !clientIds.includes(id)) {
       delete players[id];
       delete latestInputs[id];
       pendingPunches.delete(id);
     }
   });
 
-  io.emit("clientUpdate", getClientIds());
+  io.emit("clientUpdate", [...clientIds, ...Object.keys(npcCooldowns)]);
 };
 
 const emitSnapshot = () => {
@@ -115,7 +136,24 @@ const resolvePunches = () => {
 const serverTick = () => {
   tick += 1;
   const dtSeconds = 1 / TICK_RATE;
+
+  for (const id of Object.keys(npcCooldowns)) {
+    npcCooldowns[id] -= 1;
+    const npc = players[id];
+    if (!npc) continue;
+    const atWall =
+      npc.x <= 0 || npc.x >= WORLD_WIDTH - PLAYER_SIZE ||
+      npc.y <= 0 || npc.y >= WORLD_HEIGHT - PLAYER_SIZE;
+    if (npcCooldowns[id] <= 0 || atWall) {
+      npcCurrentInputs[id] = randomNpcDir();
+      npcCooldowns[id] = randomCooldown();
+    }
+    const next = applyInputToState(npc, npcCurrentInputs[id], dtSeconds);
+    players[id] = { ...next, dir: getDirectionFromInput(npcCurrentInputs[id]) || next.dir };
+  }
+
   for (const [id, player] of Object.entries(players)) {
+    if (id.startsWith(NPC_PREFIX)) continue;
     const input = latestInputs[id] ?? {
       seq: player.lastProcessedInput,
       timestamp: Date.now(),
@@ -138,6 +176,23 @@ const serverTick = () => {
     emitSnapshot();
   }
 };
+
+for (let i = 0; i < NPC_COUNT; i++) {
+  const id = `${NPC_PREFIX}${i}`;
+  players[id] = {
+    id,
+    x: Math.random() * (WORLD_WIDTH - PLAYER_SIZE),
+    y: Math.random() * (WORLD_HEIGHT - PLAYER_SIZE),
+    vx: 0,
+    vy: 0,
+    dir: "s",
+    name: "npc",
+    color: randColor(),
+    lastProcessedInput: 0,
+  };
+  npcCurrentInputs[id] = randomNpcDir();
+  npcCooldowns[id] = randomCooldown();
+}
 
 setInterval(serverTick, 1000 / TICK_RATE);
 
