@@ -28,7 +28,7 @@ interface Props {
 
 function App({ name, onBack }: Props) {
   const borderRef = useRef<HTMLDivElement>(null);
-  const playerNamesRef = useRef<Record<string, string>>({});
+  const [playerNames, setPlayerNames] = useState<Record<string, string>>({});
   const [socket] = useState<Socket>(() =>
     io(socketUrl, {
       path: "/socket.io",
@@ -68,9 +68,14 @@ function App({ name, onBack }: Props) {
 
     const onWorldSnapshot = (snapshot: WorldSnapshot) => {
       snapshotCounterRef.current += 1;
-      for (const p of snapshot.players) {
-        playerNamesRef.current[p.id] = p.name;
-      }
+      setPlayerNames((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const p of snapshot.players) {
+          if (next[p.id] !== p.name) { next[p.id] = p.name; changed = true; }
+        }
+        return changed ? next : prev;
+      });
     };
 
     socket.on("connect", onSocketConnect);
@@ -111,7 +116,7 @@ function App({ name, onBack }: Props) {
       socket.off("worldSnapshot", onWorldSnapshot);
       socket.close();
     };
-  }, [socket]);
+  }, [socket, name]);
 
   return (
     <>
@@ -145,7 +150,7 @@ function App({ name, onBack }: Props) {
         {clients
           .filter((id) => !id.startsWith("npc_"))
           .map((id: string) => {
-            const displayName = playerNamesRef.current[id] || id;
+            const displayName = playerNames[id] || id;
             if (id !== socket.id) return `${displayName}, `;
             return (
               <i key={id} className="local-client-id">
